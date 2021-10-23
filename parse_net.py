@@ -81,6 +81,41 @@ class Graph:
             match = re.search(r'(?P<clk>c\d+)   (?P<freq>\d+)', line)
             self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
 
+        # Read design.tdm
+        tdm_path = self.data_path + '/design.tdm'
+        with open(tdm_path) as f:
+            lines = f.readlines()
+
+        self.tdm = {}
+        pattern1 = r'(?P<tdm>t\d+)  (?P<freq>[\d\.]+).+?(?P<bias>\d+)'
+        pattern2 = r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+).+?(?P<freq>[\d\.]+)'
+        pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
+        for line in lines:
+            match = re.search(pattern1, line)
+            if match:
+                tdm = {}
+                tdm['freq'] = match.group('freq')
+                tdm['bias'] = match.group('bias')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+            match = re.search(pattern2, line)
+            if match:
+                tdm = {}
+                tdm['bias'] = match.group('bias')
+                tdm['base'] = match.group('base')
+                tdm['freq'] = match.group('freq')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+            match = re.search(pattern3, line)
+            if match:
+                tdm = {}
+                tdm['base'] = match.group('base')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+
         # # Add delay property
         # for node_name in self.graph:
         #     node = self.graph.nodes[node_name]
@@ -112,6 +147,7 @@ class Graph:
             self.graph.add_node(name, is_port=False)
 
 
+data_path1 = 'data/testdata_1'
 data_path2 = 'data/grpout_2'
-graph2 = Graph(data_path=data_path2)
-print(graph2.graph.nodes.data())
+graph2 = Graph(data_path=data_path1)
+# print(graph2.graph.nodes.data())
