@@ -71,6 +71,23 @@ class Graph:
                 else:
                     self.graph.add_node(node_name, clk=None)
 
+        # Read design.clk
+        clk_path = self.data_path + '/design.clk'
+        with open(clk_path) as f:
+            lines = f.readlines()
+
+        self.clk = {}
+        for line in lines:
+            match = re.search(r'(?P<clk>c\d+)   (?P<freq>\d+)', line)
+            self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
+
+        # # Add delay property
+        # for node_name in self.graph:
+        #     node = self.graph.nodes[node_name]
+        #     if (node['is_ff'] and node['clk']):
+        #         self.graph.add_node(node_name,
+        #                             delay=1000 / self.clk[node['clk']])
+
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
         plt.show()
@@ -93,7 +110,6 @@ class Graph:
             self.graph.add_node(name, is_port=True)
         else:
             self.graph.add_node(name, is_port=False)
-
 
 
 data_path2 = 'data/grpout_2'
