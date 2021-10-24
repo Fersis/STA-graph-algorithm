@@ -14,8 +14,9 @@ class Graph:
 
         nodes = []
         for line in lines:
-            nodes.append(re.search(r'(?P<name>g[p0-9]+) (?P<direction>[ls])',
-                                   line))
+            nodes.append(re.search(
+                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?(?P<delay>\d+)?',
+                line))
 
         # Get all indexes of split points
         split_indexes = []
@@ -37,6 +38,10 @@ class Graph:
                 self.graph.add_edge(start, end)
                 self._add_direction(end, direction='l')
                 self._add_port(end)
+                # Add edge delay
+                if nodes[j]['delay']:
+                    self.graph.add_edge(start, end,
+                                        delay=int(nodes[j]['delay']))
             self._add_direction(start, direction='s')
             self._add_port(start)
 
@@ -149,5 +154,6 @@ class Graph:
 
 data_path1 = 'data/testdata_1'
 data_path2 = 'data/grpout_2'
-graph2 = Graph(data_path=data_path1)
+graph2 = Graph(data_path=data_path2)
 # print(graph2.graph.nodes.data())
+print(graph2.graph.edges.data())
