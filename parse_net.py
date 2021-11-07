@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-class Graph:
+class NetGraph:
     def __init__(self, data_path) -> None:
         self.data_path = data_path
 
@@ -161,11 +161,70 @@ class Graph:
         return ff_list
 
 
-data_path1 = 'data/testdata_1'
-data_path2 = 'data/grpout_2'
-graph2 = Graph(data_path=data_path2)
-# nx.draw(graph2.graph, with_labels=True)
-# plt.show()
+class Path:
+    def __init__(self, path: list, net_graph: NetGraph):
+        self.data_arrival_time = 0
+        # self.data_expected_time
+        # self.setup_slack
+        # self.hold_slack
+        self.path = path
+        self.net_graph = net_graph
+        # Path report string, one path one string
+        self.path_report = ''
+        self._parse_path()
 
-ff_nodes = graph2.ff_nodes
-pass
+    def _parse_path(self):
+        # Add data arrival time
+        self.path_report += (
+            'path2:\n'
+            '    data arrival time:\n'
+        )
+        # Add start flip flop delay
+        node_attr = self.net_graph.graph.nodes[path[0]]
+        clk = node_attr['clk']
+        period = self.net_graph.clk[clk]
+        self.data_arrival_time += node_attr['delay']
+        self.path_report += (
+            '    ' + path[0] + ' @FPGA1    ' + str(node_attr['delay']) + '    '
+            + str(self.data_arrival_time) + '\n'
+        )
+
+        # Add cable delay
+        for i in range(len(path) - 1):
+            edge_attr = self.net_graph.graph.edges[path[i], path[i + 1]]
+            if 'delay' in edge_attr.keys():
+                self.data_arrival_time += edge_attr['delay']
+                self.path_report += (
+                    '    ' + '   @cable   +' + str(edge_attr['delay']) + '    '
+                    + str(self.data_arrival_time) + '\n'
+                )
+
+        # Add data expected time
+        self.path_report += (
+            '    ' + 'data expected time:\n'
+        )
+        # Add clock period
+        self.path_report += (
+            '    ' + clk + ' rise edge ' + str(period) + '    ' + str(period)
+        )
+        # Add clock cable delay
+        xiaopu = self.net_graph.graph.adj[path[-1]]
+        pass
+
+
+
+data_path2 = 'data/grpout_2'
+graph2 = NetGraph(data_path=data_path2)
+
+sta_rpt = ''
+for start_ff in graph2.ff_nodes:
+    for end_ff in graph2.ff_nodes:
+        paths = nx.all_simple_paths(
+            graph2.graph, source=start_ff, target=end_ff)
+        for path in paths:
+            path1 = Path(path, graph2)
+            sta_rpt += path1.path_report
+
+with open('sta__.rpt', 'w') as fout:
+    fout.write(sta_rpt)
+    fout.close()
