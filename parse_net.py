@@ -75,6 +75,9 @@ class Graph:
                     self.graph.add_node(node_name, clk=match.group('clk'))
                 else:
                     self.graph.add_node(node_name, clk=None)
+                # Add flip-flop delay
+                if match.group('is_ff') and match.group('clk'):
+                    self.graph.add_node(node_name, delay=1)
 
         # Read design.clk
         clk_path = self.data_path + '/design.clk'
@@ -121,12 +124,9 @@ class Graph:
                 self.tdm[tdm_name] = tdm
                 continue
 
-        # # Add delay property
-        # for node_name in self.graph:
-        #     node = self.graph.nodes[node_name]
-        #     if (node['is_ff'] and node['clk']):
-        #         self.graph.add_node(node_name,
-        #                             delay=1000 / self.clk[node['clk']])
+        # Fixed parameters
+        self.tsu = 1
+        self.thold = 1
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
@@ -151,9 +151,21 @@ class Graph:
         else:
             self.graph.add_node(name, is_port=False)
 
+    @property
+    def ff_nodes(self) -> list:
+        ff_list = []
+        for node_name, node_attr in self.graph.nodes.items():            
+            if 'delay' in node_attr.keys():
+                ff_list.append(node_name)
+        
+        return ff_list
+
 
 data_path1 = 'data/testdata_1'
 data_path2 = 'data/grpout_2'
 graph2 = Graph(data_path=data_path2)
-# print(graph2.graph.nodes.data())
-print(graph2.graph.edges.data())
+# nx.draw(graph2.graph, with_labels=True)
+# plt.show()
+
+ff_nodes = graph2.ff_nodes
+pass
