@@ -42,6 +42,8 @@ class NetGraph:
                 if nodes[j]['delay']:
                     self.graph.add_edge(start, end,
                                         delay=int(nodes[j]['delay']))
+                else:
+                    self.graph.add_edge(start, end, delay=0)
             self._add_direction(start, direction='s')
             self._add_port(start)
 
@@ -164,7 +166,7 @@ class NetGraph:
 class Path:
     def __init__(self, path: list, net_graph: NetGraph):
         self.data_arrival_time = 0
-        # self.data_expected_time
+        self.data_expected_time = 0
         # self.setup_slack
         # self.hold_slack
         self.path = path
@@ -204,11 +206,23 @@ class Path:
             '    ' + 'data expected time:\n'
         )
         # Add clock period
+        self.data_expected_time += period
         self.path_report += (
-            '    ' + clk + ' rise edge ' + str(period) + '    ' + str(period)
+            '    ' + clk + ' rise edge ' + str(period) + '    '
+            + str(self.data_expected_time) + '\n'
         )
         # Add clock cable delay
-        xiaopu = self.net_graph.graph.adj[path[-1]]
+        lanch_ff_ancestors = list(self.net_graph.graph.predecessors(path[0]))
+        catch_ff_ancestors = list(self.net_graph.graph.predecessors(path[-1]))
+        clk_source = [x for x in lanch_ff_ancestors if x in catch_ff_ancestors]
+        clk_source = clk_source[0]
+        clk_cable_delay = (self.net_graph.graph.edges[clk_source, path[-1]]['delay']
+                          - self.net_graph.graph.edges[clk_source, path[0]]['delay'])
+        self.data_expected_time += clk_cable_delay
+        self.path_report += (
+            '       @cable   +' + str(clk_cable_delay) + '    '
+            + str(self.data_expected_time)
+        )
         pass
 
 
