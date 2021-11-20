@@ -43,7 +43,7 @@ class NetGraph:
                     self.graph.add_edge(start, end,
                                         delay=int(nodes[j]['delay']))
                 else:
-                    self.graph.add_edge(start, end, delay=0)
+                    self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
             self._add_port(start)
 
@@ -79,7 +79,7 @@ class NetGraph:
                     self.graph.add_node(node_name, clk=None)
                 # Add flip-flop delay
                 if match.group('is_ff') and match.group('clk'):
-                    self.graph.add_node(node_name, delay=1)
+                    self.graph.add_node(node_name, delay=1.)
 
         # Read design.clk
         clk_path = self.data_path + '/design.clk'
@@ -127,8 +127,8 @@ class NetGraph:
                 continue
 
         # Fixed parameters
-        self.tsu = 1
-        self.thold = 1
+        self.tsu = 1.
+        self.thold = 1.
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
@@ -166,9 +166,10 @@ class NetGraph:
 class Path:
     def __init__(self, path: list, net_graph: NetGraph):
         self.data_arrival_time = 0
-        self.data_expected_time = 0
-        # self.setup_slack
-        # self.hold_slack
+        self.setup_expected_time = 0
+        self.hold_expected_time = 0
+        self.setup_slack = 0
+        self.hold_slack = 0
         self.path = path
         self.net_graph = net_graph
         # Path report string, one path one string
@@ -177,39 +178,39 @@ class Path:
 
     def _parse_path(self):
         # Add data arrival time
-        self.path_report += (
-            'path2:\n'
-            '    data arrival time:\n'
-        )
+        setup_report = 'path1:\n'
+        hold_report = 'path2:\n'
+        data_arrival_time = f"{' ':4}data arrival time:\n"
         # Add start flip flop delay
         node_attr = self.net_graph.graph.nodes[path[0]]
         clk = node_attr['clk']
         period = self.net_graph.clk[clk]
         self.data_arrival_time += node_attr['delay']
-        self.path_report += (
-            '    ' + path[0] + ' @FPGA1    ' + str(node_attr['delay']) + '    '
-            + str(self.data_arrival_time) + '\n'
+        data_arrival_time += (
+            f"{' ':4}{path[0]:<4}{'@FPGA1':<10}{node_attr['delay']:< 10.1f}"
+            f"{self.data_arrival_time:< 10.1f}\n"
         )
-
         # Add cable delay
         for i in range(len(path) - 1):
             edge_attr = self.net_graph.graph.edges[path[i], path[i + 1]]
-            if 'delay' in edge_attr.keys():
+            if edge_attr['delay'] != 0:
                 self.data_arrival_time += edge_attr['delay']
-                self.path_report += (
-                    '    ' + '   @cable   +' + str(edge_attr['delay']) + '    '
-                    + str(self.data_arrival_time) + '\n'
+                data_arrival_time += (
+                    f"{' ':4}{' ':<4}{'@cable':<10}{edge_attr['delay']:<+10.1f}"
+                    f"{self.data_arrival_time:< 10.1f}\n"
                 )
+        setup_report += data_arrival_time
+        hold_report += data_arrival_time
 
-        # Add data expected time
-        self.path_report += (
-            '    ' + 'data expected time:\n'
+        # Add setup expected time
+        setup_expected_time = (
+            f"{' ':4}data expected time:\n"
         )
         # Add clock period
-        self.data_expected_time += period
-        self.path_report += (
-            '    ' + clk + ' rise edge ' + str(period) + '    '
-            + str(self.data_expected_time) + '\n'
+        self.setup_expected_time += period
+        setup_expected_time += (
+            f"{' ':4}{clk:<4}{'rise edge':<10}{period:< 10.1f}"
+            f"{self.setup_expected_time:< 10.1f}\n"
         )
         # Add clock cable delay
         lanch_ff_ancestors = list(self.net_graph.graph.predecessors(path[0]))
@@ -218,11 +219,54 @@ class Path:
         clk_source = clk_source[0]
         clk_cable_delay = (self.net_graph.graph.edges[clk_source, path[-1]]['delay']
                           - self.net_graph.graph.edges[clk_source, path[0]]['delay'])
-        self.data_expected_time += clk_cable_delay
-        self.path_report += (
-            '       @cable   +' + str(clk_cable_delay) + '    '
-            + str(self.data_expected_time)
+        if clk_cable_delay != 0:
+            self.setup_expected_time += clk_cable_delay
+            setup_expected_time += (
+                f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:<+10.1f}"
+                f"{self.setup_expected_time:< 10.1f}\n"
+            )
+        # Minus Tsu
+        self.setup_expected_time -= self.net_graph.tsu
+        setup_expected_time += (
+            f"{' ':4}{path[-1]:<4}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
+            f"{self.setup_expected_time:< 10.1f}\n"
         )
+        setup_report += setup_expected_time
+
+        # Add setup slack
+        setup_report += '--------------------------------\n'
+        self.setup_slack = self.setup_expected_time - self.data_arrival_time
+        setup_report += (
+            f"setup slack {self.setup_slack:.1f}\n{'=':=<80}\n"
+        )
+
+        # Add hold expected time
+        hold_expected_time = (
+            f"{' ':4}data expected time:\n"
+        )
+        # Add clock cable delay
+        if clk_cable_delay != 0:
+            self.hold_expected_time += clk_cable_delay
+            hold_expected_time += (
+                f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:< 10.1f}"
+                f"{self.hold_expected_time:< 10.1f}\n"
+            )
+        # Add Thold
+        self.hold_expected_time += self.net_graph.thold
+        hold_expected_time += (
+            f"{' ':4}{path[-1]:<4}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
+            f"{self.hold_expected_time:< 10.1f}\n"
+        )
+        hold_report += hold_expected_time
+
+        # Add hold slack
+        hold_report += '--------------------------------\n'
+        self.hold_slack = self.data_arrival_time - self.hold_expected_time
+        hold_report += (
+            f"hold slack {self.hold_slack:.1f}\n{'=':=<80}\n"
+        )
+
+        self.path_report = setup_report + hold_report
         pass
 
 
