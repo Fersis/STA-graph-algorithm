@@ -1,6 +1,7 @@
 import re
 import networkx as nx
 import matplotlib.pyplot as plt
+from numpy import source
 
 
 class NetGraph:
@@ -51,7 +52,7 @@ class NetGraph:
         vdd_vss_nodes = []
         for node in self.graph:
             if (self.graph.nodes[node]['direction'] == 's'
-                    and self.graph.nodes[node]['is_port'] == False):
+                    and self.graph.nodes[node]['is_in_port'] == False):
                 vdd_vss_nodes.append(node)
         self.graph.remove_nodes_from(vdd_vss_nodes)
 
@@ -80,6 +81,14 @@ class NetGraph:
                 # Add flip-flop delay
                 if match.group('is_ff') and match.group('clk'):
                     self.graph.add_node(node_name, delay=1.)
+
+        # Remove clock port
+        clock_port = []
+        for node in self.graph:
+            if (self.graph.nodes[node]['is_in_port']
+                    and self.graph.nodes[node]['clk'] != None):
+                clock_port.append(node)
+        self.graph.remove_nodes_from(clock_port)
 
         # Read design.clk
         clk_path = self.data_path + '/design.clk'
@@ -149,22 +158,46 @@ class NetGraph:
         Add is_port property
         """
         if 'p' in name:
-            self.graph.add_node(name, is_port=True)
+            if self.graph.in_degree(name) == 0:
+                self.graph.add_node(name, is_in_port=True)
+                self.graph.add_node(name, is_out_port=False)
+            elif self.graph.out_degree(name) == 0:
+                self.graph.add_node(name, is_in_port=False)
+                self.graph.add_node(name, is_out_port=True)
+            else:
+                print(f'ERROR: Both in-degree and out-degree of port {name}'
+                      'are nonzero\n'
+                      f'in-degree: {self.graph.in_degree(name)}, '
+                      f'out-degree: {self.graph.out_degree(name)}\n')
         else:
-            self.graph.add_node(name, is_port=False)
+            self.graph.add_node(name, is_in_port=False)
+            self.graph.add_node(name, is_out_port=False)
 
     @property
     def ff_nodes(self) -> list:
         ff_list = []
-        for node_name, node_attr in self.graph.nodes.items():            
+        for node_name, node_attr in self.graph.nodes.items():
             if 'delay' in node_attr.keys():
                 ff_list.append(node_name)
-        
+
         return ff_list
+
+    @property
+    def out_ports(self) -> list:
+        return ([node_name for node_name, node_attr
+                 in self.graph.nodes.items() if node_attr['is_out_port']]
+                )
+
+    @property
+    def in_ports(self) -> list:
+        return ([node_name for node_name, node_attr
+                 in self.graph.nodes.items() if node_attr['is_in_port']]
+                )
 
 
 class Path:
-    def __init__(self, path: list, net_graph: NetGraph):
+    def __init__(self, start_ff_index: int, path: list, net_graph: NetGraph):
+        self.start_ff_index = start_ff_index
         self.data_arrival_time = 0
         self.setup_expected_time = 0
         self.hold_expected_time = 0
@@ -178,21 +211,33 @@ class Path:
 
     def _parse_path(self):
         # Add data arrival time
-        setup_report = 'path1:\n'
-        hold_report = 'path2:\n'
+        global path_index
+        path_index += 1
+        setup_report = f'path{path_index}:\n'
+        path_index += 1
+        hold_report = f'path{path_index}:\n'
         data_arrival_time = f"{' ':4}data arrival time:\n"
         # Add start flip flop delay
-        node_attr = self.net_graph.graph.nodes[path[0]]
+        # If start is a port, use end flip flop clock
+        if self.net_graph.graph.nodes[self.path[0]]['is_in_port']:
+            node_attr = self.net_graph.graph.nodes[self.path[-1]]
+        else:
+            node_attr = self.net_graph.graph.nodes[self.path[0]]
         clk = node_attr['clk']
         period = self.net_graph.clk[clk]
-        self.data_arrival_time += node_attr['delay']
+        # If start is a port, use default flip flop delay
+        if self.net_graph.graph.nodes[self.path[0]]['is_in_port']:
+            self.data_arrival_time += 1.
+        else:
+            self.data_arrival_time += node_attr['delay']
+        fpga = f"@FPGA{self.start_ff_index}"
         data_arrival_time += (
-            f"{' ':4}{path[0]:<4}{'@FPGA1':<10}{node_attr['delay']:< 10.1f}"
+            f"{' ':4}{self.path[0]:<4}{fpga:<10}{node_attr['delay']:< 10.1f}"
             f"{self.data_arrival_time:< 10.1f}\n"
         )
         # Add cable delay
-        for i in range(len(path) - 1):
-            edge_attr = self.net_graph.graph.edges[path[i], path[i + 1]]
+        for i in range(len(self.path) - 1):
+            edge_attr = self.net_graph.graph.edges[self.path[i], self.path[i + 1]]
             if edge_attr['delay'] != 0:
                 self.data_arrival_time += edge_attr['delay']
                 data_arrival_time += (
@@ -213,22 +258,24 @@ class Path:
             f"{self.setup_expected_time:< 10.1f}\n"
         )
         # Add clock cable delay
-        lanch_ff_ancestors = list(self.net_graph.graph.predecessors(path[0]))
-        catch_ff_ancestors = list(self.net_graph.graph.predecessors(path[-1]))
+        lanch_ff_ancestors = list(self.net_graph.graph.predecessors(self.path[0]))
+        catch_ff_ancestors = list(self.net_graph.graph.predecessors(self.path[-1]))
         clk_source = [x for x in lanch_ff_ancestors if x in catch_ff_ancestors]
-        clk_source = clk_source[0]
-        clk_cable_delay = (self.net_graph.graph.edges[clk_source, path[-1]]['delay']
-                          - self.net_graph.graph.edges[clk_source, path[0]]['delay'])
-        if clk_cable_delay != 0:
-            self.setup_expected_time += clk_cable_delay
-            setup_expected_time += (
-                f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:<+10.1f}"
-                f"{self.setup_expected_time:< 10.1f}\n"
-            )
+        # Check whether clock path has clock cable delay
+        if len(clk_source) != 0:
+            clk_source = clk_source[0]
+            clk_cable_delay = (self.net_graph.graph.edges[clk_source, self.path[-1]]['delay']
+                               - self.net_graph.graph.edges[clk_source, self.path[0]]['delay'])
+            if clk_cable_delay != 0:
+                self.setup_expected_time += clk_cable_delay
+                setup_expected_time += (
+                    f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:<+10.1f}"
+                    f"{self.setup_expected_time:< 10.1f}\n"
+                )
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
         setup_expected_time += (
-            f"{' ':4}{path[-1]:<4}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
+            f"{' ':4}{self.path[-1]:<4}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
             f"{self.setup_expected_time:< 10.1f}\n"
         )
         setup_report += setup_expected_time
@@ -245,16 +292,17 @@ class Path:
             f"{' ':4}data expected time:\n"
         )
         # Add clock cable delay
-        if clk_cable_delay != 0:
-            self.hold_expected_time += clk_cable_delay
-            hold_expected_time += (
-                f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:< 10.1f}"
-                f"{self.hold_expected_time:< 10.1f}\n"
-            )
+        if len(clk_source) != 0:
+            if clk_cable_delay != 0:
+                self.hold_expected_time += clk_cable_delay
+                hold_expected_time += (
+                    f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:< 10.1f}"
+                    f"{self.hold_expected_time:< 10.1f}\n"
+                )
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         hold_expected_time += (
-            f"{' ':4}{path[-1]:<4}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
+            f"{' ':4}{self.path[-1]:<4}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
             f"{self.hold_expected_time:< 10.1f}\n"
         )
         hold_report += hold_expected_time
@@ -270,18 +318,60 @@ class Path:
         pass
 
 
-
 data_path2 = 'data/grpout_2'
 graph2 = NetGraph(data_path=data_path2)
 
 sta_rpt = ''
-for start_ff in graph2.ff_nodes:
+# Define global path index
+path_index = 0
+for i, start_ff in enumerate(graph2.ff_nodes):
+    # flip flop to flip flop
     for end_ff in graph2.ff_nodes:
         paths = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=end_ff)
-        for path in paths:
-            path1 = Path(path, graph2)
-            sta_rpt += path1.path_report
+        for path_list in paths:
+            path = Path(i, path_list, graph2)
+            sta_rpt += path.path_report
+
+    # flip flop to out port
+    for out_port in graph2.out_ports:
+        paths = nx.all_simple_paths(
+            graph2.graph, source=start_ff, target=out_port)
+        for path_list in paths:
+            # Check whether this path go through a flip flop. If it is, it is
+            # a bad path
+            bad_path = False
+            for node in path_list[1: -1]:
+                if node in graph2.ff_nodes:
+                    bad_path = True
+                    break
+            if bad_path:
+                continue
+
+            path = Path(i, path_list, graph2)
+            sta_rpt += path.path_report
+
+for in_port in graph2.in_ports:
+    # in port to flip flop
+    for end_ff in graph2.ff_nodes:
+        paths = nx.all_simple_paths(
+            graph2.graph, source=in_port, target=end_ff
+        )
+        for path_list in paths:
+            # Check whether this path go through a flip flop. If it is, it is
+            # a bad path
+            bad_path = False
+            for node in path_list[1: -1]:
+                if node in graph2.ff_nodes:
+                    bad_path = True
+                    break
+            if bad_path:
+                continue
+
+            path = Path(1, path_list, graph2)
+            sta_rpt += path.path_report
+
+
 
 with open('sta__.rpt', 'w') as fout:
     fout.write(sta_rpt)
