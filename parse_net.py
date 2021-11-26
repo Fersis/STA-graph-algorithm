@@ -1,7 +1,7 @@
 import re
 import networkx as nx
 import matplotlib.pyplot as plt
-from numpy import source
+from ta_classes import DFF, Port
 
 
 class NetGraph:
