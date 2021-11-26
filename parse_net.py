@@ -406,6 +406,6 @@ sta_rpt = (
 for path in paths:
     sta_rpt += path.path_report
 
-with open(f'sta_{case_name}.rpt', 'w') as fout:
+with open(f'rpt/sta_{case_name}.rpt', 'w') as fout:
     fout.write(sta_rpt)
     fout.close()
