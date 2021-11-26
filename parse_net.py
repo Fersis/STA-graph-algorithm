@@ -244,7 +244,7 @@ class Path:
             self.data_arrival_time += node_attr['delay']
         fpga = f"@FPGA{self.start_ff_index}"
         data_arrival_time += (
-            f"{' ':4}{self.path[0]:<4}{fpga:<10}{node_attr['delay']:< 10.1f}"
+            f"{' ':4}{self.path[0]:<9}{fpga:<10}{node_attr['delay']:< 10.1f}"
             f"{self.data_arrival_time:< 10.1f}\n"
         )
         # Add cable delay
@@ -253,7 +253,7 @@ class Path:
             if edge_attr['delay'] != 0:
                 self.data_arrival_time += edge_attr['delay']
                 data_arrival_time += (
-                    f"{' ':4}{' ':<4}{'@cable':<10}{edge_attr['delay']:<+10.1f}"
+                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_attr['delay']:<+10.1f}"
                     f"{self.data_arrival_time:< 10.1f}\n"
                 )
         setup_report += data_arrival_time
@@ -266,7 +266,7 @@ class Path:
         # Add clock period
         self.setup_expected_time += period
         setup_expected_time += (
-            f"{' ':4}{clk:<4}{'rise edge':<10}{period:< 10.1f}"
+            f"{' ':4}{clk:<9}{'rise edge':<10}{period:< 10.1f}"
             f"{self.setup_expected_time:< 10.1f}\n"
         )
         # Add clock cable delay
@@ -281,13 +281,13 @@ class Path:
             if clk_cable_delay != 0:
                 self.setup_expected_time += clk_cable_delay
                 setup_expected_time += (
-                    f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:<+10.1f}"
+                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:<+10.1f}"
                     f"{self.setup_expected_time:< 10.1f}\n"
                 )
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
         setup_expected_time += (
-            f"{' ':4}{self.path[-1]:<4}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
+            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
             f"{self.setup_expected_time:< 10.1f}\n"
         )
         setup_report += setup_expected_time
@@ -308,13 +308,13 @@ class Path:
             if clk_cable_delay != 0:
                 self.hold_expected_time += clk_cable_delay
                 hold_expected_time += (
-                    f"{' ':4}{' ':<4}{'@cable':<10}{clk_cable_delay:< 10.1f}"
+                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:< 10.1f}"
                     f"{self.hold_expected_time:< 10.1f}\n"
                 )
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         hold_expected_time += (
-            f"{' ':4}{self.path[-1]:<4}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
+            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
             f"{self.hold_expected_time:< 10.1f}\n"
         )
         hold_report += hold_expected_time
