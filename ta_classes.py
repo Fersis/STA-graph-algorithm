@@ -56,7 +56,7 @@ class Power:
     pass
 
 
-class ClkCell:
+class ClockCell:
     """A cell in clock path that do nothing
     
     Delay of this cell is ignored and it includes a "ff" property.
