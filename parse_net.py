@@ -174,18 +174,18 @@ class NetGraph:
     def _get_clock_path_delay(self, node: DFF | ClockCell) -> float:
         """Get the clock source latency from clock source to this node
 
-        Node must be DFF or ClockCell. This method will find the ancestors
-        of node, one of its ancestors must be ClockSource or ClockCell.
+        Node must be DFF or ClockCell. This method will find the predecessors
+        of node, one of its predecessors must be ClockSource or ClockCell.
         If it's ClockSource, return the delay between ClockSource and the node.
         If it's ClockCell, return the delay between ClockCell and the node
         plus the value from _get_clock_path_delay(ClockCell).
         """
-        for ancestor in nx.ancestors(self.graph, node):
-            if type(self.graph.nodes[ancestor]['property']) == ClockSource:
-                return self.graph.edges[ancestor, node]['delay']
-            elif type(self.graph.nodes[ancestor]['property']) == ClockCell:
-                return (self.graph.edges[ancestor, node]['delay']
-                        + self._get_clock_path_delay(ancestor))
+        for predecessor in self.graph.predecessors(node):
+            if type(self.graph.nodes[predecessor]['property']) == ClockSource:
+                return self.graph.edges[predecessor, node]['delay']
+            elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
+                return (self.graph.edges[predecessor, node]['delay']
+                        + self._get_clock_path_delay(predecessor))
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
