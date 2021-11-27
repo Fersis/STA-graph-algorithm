@@ -62,14 +62,9 @@ class NetGraph:
 
         # Get clock source latency
         for ff_node in self.ff_nodes:
-            clk_src_latency = 0.0
-            for ancestor in nx.ancestors(self.graph, ff_node):
-                if type(self.graph.nodes[ancestor]['property'] == ClockSource):
-                    clk_src_latency += self.graph.edges[ancestor,
-                                                        ff_node]['delay']
-                elif type(self.graph.nodes[ancestor]['property'] == ClockCell):
-                    clk_src_latency += self.g
-            self.graph.nodes[ff_node]['property'].clock_source_latency
+            self.graph.nodes[ff_node]['property'].clock_source_latency = (
+                self._get_clock_path_delay(ff_node)
+            )
 
         # Read design.clk
         clk_path = data_path + '/design.clk'
