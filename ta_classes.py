@@ -44,3 +44,24 @@ class ClockSource:
 
     def __init__(self, clk_domain: str):
         self.clock_domain = clk_domain
+
+
+class Power:
+    """VDD and VSS node contains nothing
+    
+    A power node shouldn't be a port and it includes a "ff" property.
+    For example: g0 {ff}. It's in-degress should be 0, that is, the node
+    direction should only be "s".
+    """
+    pass
+
+
+class ClkCell:
+    """A cell in clock path that do nothing
+    
+    Delay of this cell is ignored and it includes a "ff" property.
+    For example: g2 {ff}. The difference between ClkCell and Power is that
+    both it's in-degree and out-degree mustn't be 0, that is, the node 
+    direction should only be "s/l"
+    """
+    pass
