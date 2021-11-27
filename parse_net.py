@@ -106,6 +106,14 @@ class NetGraph:
         self.tsu = 1.
         self.thold = 1.
 
+    def _add_direction(self, name: str, direction: str):
+        """Add direction property"""
+        keys = self.graph.nodes[name].keys()
+        if ('direction' not in keys):
+            self.graph.add_node(name, direction=direction)
+        elif (self.graph.nodes[name]['direction'] != direction):
+            self.graph.add_node(name, direction='s/l')
+
     def _add_property(self, match: re.Match):
         """Add a node class to node["property"]
 
@@ -154,14 +162,6 @@ class NetGraph:
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
         plt.show()
-
-    def _add_direction(self, name: str, direction: str):
-        """Add direction property"""
-        keys = self.graph.nodes[name].keys()
-        if ('direction' not in keys):
-            self.graph.add_node(name, direction=direction)
-        elif (self.graph.nodes[name]['direction'] != direction):
-            self.graph.add_node(name, direction='s/l')
 
     @property
     def ff_nodes(self) -> list:
