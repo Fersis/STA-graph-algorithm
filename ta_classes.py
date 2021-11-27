@@ -2,7 +2,9 @@
 class DFF:
     """Stores it's clock domain and clock source latency
 
-    A DFF should have a "ff" property and a clock domain in design.are file."""
+    A DFF should have a "ff" property and a clock domain in design.are file.
+    For example: "g7 {ff c1}"
+    """
 
     def __init__(self, clk: str = ''):
         self.tco = 1.0
@@ -13,8 +15,9 @@ class DFF:
 class Port:
     """Store the direction_of_signal
 
-    This port class includes "in port" and "out port" and has "p" character
-    in name.
+    This port class includes "in port" and "out port" but not clock port
+    (clock domain). So it's name must include a "p" character and it's
+    property shouldn't include clock domain. For example: "gp0"
     """
 
     def __init__(self, direction_of_signal: str):
