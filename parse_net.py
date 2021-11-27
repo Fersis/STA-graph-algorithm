@@ -6,10 +6,10 @@ from ta_classes import DFF, Cell, ClockCell, ClockSource, Port, Power
 
 class NetGraph:
     def __init__(self, data_path) -> None:
-        self.data_path = data_path
+        data_path = data_path
 
         # Read design.net
-        net_path = self.data_path + '/design.net'
+        net_path = data_path + '/design.net'
         with open(net_path) as f:
             lines = f.readlines()
 
@@ -47,7 +47,7 @@ class NetGraph:
             self._add_direction(start, direction='s')
 
         # Read design.are
-        are_path = self.data_path + '/design.are'
+        are_path = data_path + '/design.are'
         with open(are_path) as f:
             lines = f.readlines()
 
@@ -58,7 +58,7 @@ class NetGraph:
             self._add_property(match)
 
         # Read design.clk
-        clk_path = self.data_path + '/design.clk'
+        clk_path = data_path + '/design.clk'
         with open(clk_path) as f:
             lines = f.readlines()
 
@@ -68,7 +68,7 @@ class NetGraph:
             self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
 
         # Read design.tdm
-        tdm_path = self.data_path + '/design.tdm'
+        tdm_path = data_path + '/design.tdm'
         with open(tdm_path) as f:
             lines = f.readlines()
 
