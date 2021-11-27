@@ -62,10 +62,14 @@ class NetGraph:
 
         # Get clock source latency
         for ff_node in self.ff_nodes:
-            for ancestor in nx.ancestors(ff_node):
+            clk_src_latency = 0.0
+            for ancestor in nx.ancestors(self.graph, ff_node):
                 if type(self.graph.nodes[ancestor]['property'] == ClockSource):
-                    self.graph.nodes[ff_node]['property'].clock_source_latency\
-                        = self.graph.edges[ancestor, ff_node]['delay']
+                    clk_src_latency += self.graph.edges[ancestor,
+                                                        ff_node]['delay']
+                elif type(self.graph.nodes[ancestor]['property'] == ClockCell):
+                    clk_src_latency += self.g
+            self.graph.nodes[ff_node]['property'].clock_source_latency
 
         # Read design.clk
         clk_path = data_path + '/design.clk'
@@ -171,6 +175,22 @@ class NetGraph:
             else:
                 # What's the value of cell delay?
                 self.graph.add_node(node_name, property=Cell(1.0))
+
+    def _get_clock_path_delay(self, node: DFF | ClockCell) -> float:
+        """Get the clock source latency from clock source to this node
+
+        Node must be DFF or ClockCell. This method will find the ancestors
+        of node, one of its ancestors must be ClockSource or ClockCell.
+        If it's ClockSource, return the delay between ClockSource and the node.
+        If it's ClockCell, return the delay between ClockCell and the node
+        plus the value from _get_clock_path_delay(ClockCell).
+        """
+        for ancestor in nx.ancestors(self.graph, node):
+            if type(self.graph.nodes[ancestor]['property']) == ClockSource:
+                return self.graph.edges[ancestor, node]['delay']
+            elif type(self.graph.nodes[ancestor]['property']) == ClockCell:
+                return (self.graph.edges[ancestor, node]['delay']
+                        + self._get_clock_path_delay(ancestor))
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
