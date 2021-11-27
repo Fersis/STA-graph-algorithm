@@ -1,7 +1,7 @@
 import re
 import networkx as nx
 import matplotlib.pyplot as plt
-from ta_classes import DFF, Port
+from ta_classes import DFF, Cell, ClockCell, ClockSource, Port, Power
 
 
 class NetGraph:
@@ -38,23 +38,13 @@ class NetGraph:
                 end = nodes[j].group('name')
                 self.graph.add_edge(start, end)
                 self._add_direction(end, direction='l')
-                self._add_port(end)
-                # Add edge delay
+                # Add edge delay. Every edge should contain delay.
                 if nodes[j]['delay']:
                     self.graph.add_edge(start, end,
-                                        delay=int(nodes[j]['delay']))
+                                        delay=float(nodes[j]['delay']))
                 else:
                     self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
-            self._add_port(start)
-
-        # Remove VDD and VSS
-        vdd_vss_nodes = []
-        for node in self.graph:
-            if (self.graph.nodes[node]['direction'] == 's'
-                    and self.graph.nodes[node]['is_in_port'] == False):
-                vdd_vss_nodes.append(node)
-        self.graph.remove_nodes_from(vdd_vss_nodes)
 
         # Read design.are
         are_path = self.data_path + '/design.are'
@@ -65,30 +55,7 @@ class NetGraph:
             match = re.search(
                 r'(?P<name>g[p0-9]+)\s?(?:{(?P<is_ff>ff)?\s?(?P<clk>c\d+)?})?',
                 line)
-            node_name = match.group('name')
-            # Exclude Vdd and Vss
-            if node_name in self.graph:
-                # Add ff property
-                if match.group('is_ff'):
-                    self.graph.add_node(node_name, is_ff=True)
-                else:
-                    self.graph.add_node(node_name, is_ff=False)
-                # Add clk property
-                if match.group('clk'):
-                    self.graph.add_node(node_name, clk=match.group('clk'))
-                else:
-                    self.graph.add_node(node_name, clk=None)
-                # Add flip-flop delay
-                if match.group('is_ff') and match.group('clk'):
-                    self.graph.add_node(node_name, delay=1.)
-
-        # Remove clock port
-        clock_port = []
-        for node in self.graph:
-            if (self.graph.nodes[node]['is_in_port']
-                    and self.graph.nodes[node]['clk'] != None):
-                clock_port.append(node)
-        self.graph.remove_nodes_from(clock_port)
+            self._add_property(match)
 
         # Read design.clk
         clk_path = self.data_path + '/design.clk'
@@ -139,39 +106,62 @@ class NetGraph:
         self.tsu = 1.
         self.thold = 1.
 
+    def _add_property(self, match: re.Match):
+        """Add a node class to node["property"]
+
+        Each node's property should either be a DFF, Cell, Port, ClockSource
+        or ClockCell class.
+        """
+
+        node_name = match.group('name')
+        # Classify port class and non port class
+        if 'p' in node_name:
+            # Classify ClockSource and Port
+            if match.group('clk'):
+                self.graph.add_node(
+                    node_name, property=ClockSource(match.group('clk')))
+            else:
+                # Classify in port and out port
+                if self.graph.nodes[node_name]['direction'] == 's':
+                    self.graph.add_node(node_name, property=Port('in'))
+                elif self.graph.nodes[node_name]['direction'] == 'l':
+                    self.graph.add_node(node_name, property=Port('out'))
+                else:
+                    print("ERROR: Both in-degree and out-degree of port "
+                          f"{node_name} are nonzero\n"
+                          "node direction "
+                          f"{self.graph.nodes[node_name]['direction']}\n"
+                          )
+        else:
+            # Classify DFF and cell
+            if match.group('is_ff'):
+                # Classify DFF and (ClockCell, Power)
+                if match.group('clk'):
+                    self.graph.add_node(
+                        node_name, property=DFF(match.group('clk')))
+                else:
+                    # Classify Power and ClockCell
+                    if self.graph.nodes[node_name]['direction'] == 's':
+                        # Remove Power node directly
+                        # self.graph.add_node(node_name, property=Power())
+                        self.graph.remove_node(node_name)
+                    elif self.graph.nodes[node_name]['direction'] == 's/l':
+                        self.graph.add_node(node_name, property=ClockCell())
+            else:
+                # What's the value of cell delay?
+                self.graph.add_node(node_name, property=Cell(1.0))
+
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
         plt.show()
 
     def _add_direction(self, name: str, direction: str):
-        """
-        Add direction property
-        """
+        """Add direction property"""
         keys = self.graph.nodes[name].keys()
         if ('direction' not in keys):
             self.graph.add_node(name, direction=direction)
         elif (self.graph.nodes[name]['direction'] != direction):
             self.graph.add_node(name, direction='s/l')
-
-    def _add_port(self, name: str):
-        """
-        Add is_port property
-        """
-        if 'p' in name:
-            if self.graph.in_degree(name) == 0:
-                self.graph.add_node(name, is_in_port=True)
-                self.graph.add_node(name, is_out_port=False)
-            elif self.graph.out_degree(name) == 0:
-                self.graph.add_node(name, is_in_port=False)
-                self.graph.add_node(name, is_out_port=True)
-            else:
-                print(f'ERROR: Both in-degree and out-degree of port {name}'
-                      'are nonzero\n'
-                      f'in-degree: {self.graph.in_degree(name)}, '
-                      f'out-degree: {self.graph.out_degree(name)}\n')
-        else:
-            self.graph.add_node(name, is_in_port=False)
-            self.graph.add_node(name, is_out_port=False)
 
     @property
     def ff_nodes(self) -> list:
@@ -220,7 +210,6 @@ class Path:
         else:
             self.is_hold_violated = False
 
-
     def _parse_path(self):
         # Add data arrival time
         global path_index
@@ -249,7 +238,8 @@ class Path:
         )
         # Add cable delay
         for i in range(len(self.path) - 1):
-            edge_attr = self.net_graph.graph.edges[self.path[i], self.path[i + 1]]
+            edge_attr = self.net_graph.graph.edges[self.path[i],
+                                                   self.path[i + 1]]
             if edge_attr['delay'] != 0:
                 self.data_arrival_time += edge_attr['delay']
                 data_arrival_time += (
@@ -270,8 +260,10 @@ class Path:
             f"{self.setup_expected_time:< 10.1f}\n"
         )
         # Add clock cable delay
-        lanch_ff_ancestors = list(self.net_graph.graph.predecessors(self.path[0]))
-        catch_ff_ancestors = list(self.net_graph.graph.predecessors(self.path[-1]))
+        lanch_ff_ancestors = list(
+            self.net_graph.graph.predecessors(self.path[0]))
+        catch_ff_ancestors = list(
+            self.net_graph.graph.predecessors(self.path[-1]))
         clk_source = [x for x in lanch_ff_ancestors if x in catch_ff_ancestors]
         # Check whether clock path has clock cable delay
         if len(clk_source) != 0:
