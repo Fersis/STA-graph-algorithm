@@ -47,6 +47,9 @@ class NetGraph:
             self._add_direction(start, direction='s')
 
         # Read design.are
+        self.ff_nodes = []
+        self.in_ports = []
+        self.out_ports = []
         are_path = data_path + '/design.are'
         with open(are_path) as f:
             lines = f.readlines()
@@ -132,8 +135,10 @@ class NetGraph:
                 # Classify in port and out port
                 if self.graph.nodes[node_name]['direction'] == 's':
                     self.graph.add_node(node_name, property=Port('in'))
+                    self.in_ports.append(node_name)
                 elif self.graph.nodes[node_name]['direction'] == 'l':
                     self.graph.add_node(node_name, property=Port('out'))
+                    self.out_ports.append(node_name)
                 else:
                     print("ERROR: Both in-degree and out-degree of port "
                           f"{node_name} are nonzero\n"
@@ -147,6 +152,7 @@ class NetGraph:
                 if match.group('clk'):
                     self.graph.add_node(
                         node_name, property=DFF(match.group('clk')))
+                    self.ff_nodes.append(node_name)
                 else:
                     # Classify Power and ClockCell
                     if self.graph.nodes[node_name]['direction'] == 's':
@@ -162,27 +168,6 @@ class NetGraph:
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
         plt.show()
-
-    @property
-    def ff_nodes(self) -> list:
-        ff_list = []
-        for node_name, node_attr in self.graph.nodes.items():
-            if 'delay' in node_attr.keys():
-                ff_list.append(node_name)
-
-        return ff_list
-
-    @property
-    def out_ports(self) -> list:
-        return ([node_name for node_name, node_attr
-                 in self.graph.nodes.items() if node_attr['is_out_port']]
-                )
-
-    @property
-    def in_ports(self) -> list:
-        return ([node_name for node_name, node_attr
-                 in self.graph.nodes.items() if node_attr['is_in_port']]
-                )
 
 
 class Path:
