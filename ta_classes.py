@@ -1,6 +1,6 @@
 
 class DFF:
-    """Stores it's clock domain and clock source latency
+    """Stores clock domain and clock source latency info
 
     A DFF should have a "ff" property and a clock domain in design.are file.
     For example: "g7 {ff c1}"
@@ -10,6 +10,7 @@ class DFF:
         self.tco = 1.0
         self.clk = clk
         self.clock_source_latency = 0.0
+        self.clock_delay_report = ''
 
 
 class Port:
