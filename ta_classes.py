@@ -1,3 +1,6 @@
+from typing_extensions import Self
+import networkx as nx
+
 
 class DFF:
     """Stores clock domain and clock source latency info
@@ -6,11 +9,29 @@ class DFF:
     For example: "g7 {ff c1}"
     """
 
-    def __init__(self, clk: str = ''):
+    def __init__(self, graph: nx.DiGraph, node: str, clk: str = ''):
+        self.graph = graph
         self.tco = 1.0
         self.clk = clk
         self.clock_source_latency = 0.0
-        self.clock_delay_report = ''
+        self.clock_delay_report = self._get_clock_path_delay(node)
+
+    def _get_clock_path_delay(self, node: Self | ClockCell) -> float:
+        """Get the clock source latency from clock source to this node
+
+        Node must be DFF or ClockCell. This method will find the predecessors
+        of node, one of its predecessors must be ClockSource or ClockCell.
+        If it's ClockSource, return the delay between ClockSource and the node.
+        If it's ClockCell, return the delay between ClockCell and the node
+        plus the value from _get_clock_path_delay(ClockCell).
+        """
+        for predecessor in self.graph.predecessors(node):
+            if type(self.graph.nodes[predecessor]['property']) == ClockSource:
+                return self.graph.edges[predecessor, node]['delay']
+            elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
+                return (self.graph.edges[predecessor, node]['delay']
+                        + self._get_clock_path_delay(predecessor))
+
 
 
 class Port:
