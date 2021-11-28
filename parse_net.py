@@ -60,9 +60,9 @@ class NetGraph:
                 line)
             self._add_property(match)
 
-        # 
+        # Get clock source latency
         for ff_node in self.ff_nodes:
-            self.graph.nodes[ff_node]['property']._get_clock_path_delay(ff_node)
+            self.graph.nodes[ff_node]['property'].get_clock_path_delay(ff_node)
 
         # Read design.clk
         clk_path = data_path + '/design.clk'

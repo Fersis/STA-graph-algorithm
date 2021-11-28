@@ -27,7 +27,7 @@ class DFF:
         self.clock_source_latency = 0.0
         self.clock_delay_report = ''
 
-    def _get_clock_path_delay(self, node):
+    def get_clock_path_delay(self, node):
         """Get the clock source latency from clock source to this node
 
         Node must be DFF or ClockCell. This method will find the predecessors
@@ -57,7 +57,7 @@ class DFF:
                         f"{' ':4}{' ':<9}{'@cable':<10}{delay:<+10.1f}"
                         f"{self.clock_source_latency:< 10.1f}\n"
                     )
-                return self._get_clock_path_delay(predecessor)
+                return self.get_clock_path_delay(predecessor)
 
 
 class Port:
