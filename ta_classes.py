@@ -2,6 +2,17 @@ from typing_extensions import Self
 import networkx as nx
 
 
+class ClockCell:
+    """A cell in clock path that do nothing
+
+    Delay of this cell is ignored and it includes a "ff" property.
+    For example: g2 {ff}. The difference between ClkCell and Power is that
+    both it's in-degree and out-degree mustn't be 0, that is, the node 
+    direction should only be "s/l"
+    """
+    pass
+
+
 class DFF:
     """Stores clock domain and clock source latency info
 
@@ -31,7 +42,6 @@ class DFF:
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
                 return (self.graph.edges[predecessor, node]['delay']
                         + self._get_clock_path_delay(predecessor))
-
 
 
 class Port:
@@ -70,20 +80,9 @@ class ClockSource:
 
 class Power:
     """VDD and VSS node contains nothing
-    
+
     A power node shouldn't be a port and it includes a "ff" property.
     For example: g0 {ff}. It's in-degress should be 0, that is, the node
     direction should only be "s".
-    """
-    pass
-
-
-class ClockCell:
-    """A cell in clock path that do nothing
-    
-    Delay of this cell is ignored and it includes a "ff" property.
-    For example: g2 {ff}. The difference between ClkCell and Power is that
-    both it's in-degree and out-degree mustn't be 0, that is, the node 
-    direction should only be "s/l"
     """
     pass
