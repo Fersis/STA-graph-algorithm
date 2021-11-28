@@ -156,7 +156,7 @@ class NetGraph:
                 if match.group('clk'):
                     self.graph.add_node(
                         node_name,
-                        property=DFF(self.graph, node_name, match.group('clk')))
+                        property=DFF(self.graph, match.group('clk')))
                     self.ff_nodes.append(node_name)
                 else:
                     # Classify Power and ClockCell
