@@ -1,5 +1,5 @@
-from typing_extensions import Self
 import networkx as nx
+from typing_extensions import Self
 
 
 class ClockCell:
@@ -20,28 +20,44 @@ class DFF:
     For example: "g7 {ff c1}"
     """
 
-    def __init__(self, graph: nx.DiGraph, node: str, clk: str = ''):
+    def __init__(self, graph: nx.DiGraph, clk: str = ''):
         self.graph = graph
         self.tco = 1.0
         self.clk = clk
         self.clock_source_latency = 0.0
-        self.clock_delay_report = self._get_clock_path_delay(node)
+        self.clock_delay_report = ''
 
-    def _get_clock_path_delay(self, node: Self | ClockCell) -> float:
+    def _get_clock_path_delay(self, node):
         """Get the clock source latency from clock source to this node
 
         Node must be DFF or ClockCell. This method will find the predecessors
         of node, one of its predecessors must be ClockSource or ClockCell.
-        If it's ClockSource, return the delay between ClockSource and the node.
-        If it's ClockCell, return the delay between ClockCell and the node
-        plus the value from _get_clock_path_delay(ClockCell).
+        If it's ClockSource, get the delay between ClockSource and the node
+        and return.
+        If it's ClockCell, get the delay between ClockCell and the node and
+        return _get_clock_path_delay(ClockCell).
+        Simultaneously get clock delay report.
         """
+
         for predecessor in self.graph.predecessors(node):
             if type(self.graph.nodes[predecessor]['property']) == ClockSource:
-                return self.graph.edges[predecessor, node]['delay']
+                delay = self.graph.edges[predecessor, node]['delay']
+                if delay:
+                    self.clock_source_latency += delay
+                    self.clock_delay_report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{delay:<+10.1f}"
+                        f"{self.clock_source_latency:< 10.1f}\n"
+                    )
+                return
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
-                return (self.graph.edges[predecessor, node]['delay']
-                        + self._get_clock_path_delay(predecessor))
+                delay = self.graph.edges[predecessor, node]['delay']
+                if delay:
+                    self.clock_source_latency += delay
+                    self.clock_delay_report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{delay:<+10.1f}"
+                        f"{self.clock_source_latency:< 10.1f}\n"
+                    )
+                return self._get_clock_path_delay(predecessor)
 
 
 class Port:

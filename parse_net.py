@@ -60,6 +60,10 @@ class NetGraph:
                 line)
             self._add_property(match)
 
+        # 
+        for ff_node in self.ff_nodes:
+            self.graph.nodes[ff_node]['property']._get_clock_path_delay(ff_node)
+
         # Read design.clk
         clk_path = data_path + '/design.clk'
         with open(clk_path) as f:
@@ -151,7 +155,8 @@ class NetGraph:
                 # Classify DFF and (ClockCell, Power)
                 if match.group('clk'):
                     self.graph.add_node(
-                        node_name, property=DFF(match.group('clk')))
+                        node_name,
+                        property=DFF(self.graph, node_name, match.group('clk')))
                     self.ff_nodes.append(node_name)
                 else:
                     # Classify Power and ClockCell
