@@ -1,367 +1,45 @@
 import re
 import networkx as nx
-import matplotlib.pyplot as plt
-from ta_classes import DFF, Cell, ClockCell, ClockSource, Port, Power
+import ta_classes as ta
+from pathlib import Path
 
 
-class NetGraph:
-    def __init__(self, data_path) -> None:
-        data_path = data_path
-
-        # Read design.net
-        net_path = data_path + '/design.net'
-        with open(net_path) as f:
-            lines = f.readlines()
-
-        nodes = []
-        for line in lines:
-            nodes.append(re.search(
-                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?(?P<delay>\d+)?',
-                line))
-
-        # Get all indexes of split points
-        split_indexes = []
-        for i, node in enumerate(nodes):
-            if (node.group('direction') == 's'):
-                split_indexes.append(i)
-        # End index should also be a split point
-        split_indexes.append(len(nodes))
-
-        # Add nodes and edges to the directed graph
-        self.graph = nx.DiGraph()
-        # For example, the split_indexes is [0, 3, 6, 9], itereate over
-        # [0, 3], [3, 6], [6, 9], each one is a group of edges.
-        # In [0, 3], iterate from 1 to 3.
-        for i in range(len(split_indexes) - 1):
-            start = nodes[split_indexes[i]].group('name')
-            for j in range(split_indexes[i] + 1, split_indexes[i + 1]):
-                end = nodes[j].group('name')
-                self.graph.add_edge(start, end)
-                self._add_direction(end, direction='l')
-                # Add edge delay. Every edge should contain delay.
-                if nodes[j]['delay']:
-                    self.graph.add_edge(start, end,
-                                        delay=float(nodes[j]['delay']))
-                else:
-                    self.graph.add_edge(start, end, delay=0.)
-            self._add_direction(start, direction='s')
-
-        # Read design.are
-        self.ff_nodes = []
-        self.in_ports = []
-        self.out_ports = []
-        are_path = data_path + '/design.are'
-        with open(are_path) as f:
-            lines = f.readlines()
-
-        for line in lines:
-            match = re.search(
-                r'(?P<name>g[p0-9]+)\s?(?:{(?P<is_ff>ff)?\s?(?P<clk>c\d+)?})?',
-                line)
-            self._add_property(match)
-
-        # Get clock source latency
-        for ff_node in self.ff_nodes:
-            self.graph.nodes[ff_node]['property'].clock_source_latency = (
-                self._get_clock_path_delay(ff_node)
-            )
-
-        # Read design.clk
-        clk_path = data_path + '/design.clk'
-        with open(clk_path) as f:
-            lines = f.readlines()
-
-        self.clk = {}
-        for line in lines:
-            match = re.search(r'(?P<clk>c\d+)   (?P<freq>\d+)', line)
-            self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
-
-        # Read design.tdm
-        tdm_path = data_path + '/design.tdm'
-        with open(tdm_path) as f:
-            lines = f.readlines()
-
-        self.tdm = {}
-        pattern1 = r'(?P<tdm>t\d+)  (?P<freq>[\d\.]+).+?(?P<bias>\d+)'
-        pattern2 = r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+).+?(?P<freq>[\d\.]+)'
-        pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
-        for line in lines:
-            match = re.search(pattern1, line)
-            if match:
-                tdm = {}
-                tdm['freq'] = match.group('freq')
-                tdm['bias'] = match.group('bias')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
-            match = re.search(pattern2, line)
-            if match:
-                tdm = {}
-                tdm['bias'] = match.group('bias')
-                tdm['base'] = match.group('base')
-                tdm['freq'] = match.group('freq')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
-            match = re.search(pattern3, line)
-            if match:
-                tdm = {}
-                tdm['base'] = match.group('base')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
-
-        # Fixed parameters
-        self.tsu = 1.
-        self.thold = 1.
-
-    def _add_direction(self, name: str, direction: str):
-        """Add direction property"""
-        keys = self.graph.nodes[name].keys()
-        if ('direction' not in keys):
-            self.graph.add_node(name, direction=direction)
-        elif (self.graph.nodes[name]['direction'] != direction):
-            self.graph.add_node(name, direction='s/l')
-
-    def _add_property(self, match: re.Match):
-        """Add a node class to node["property"]
-
-        Each node's property should either be a DFF, Cell, Port, ClockSource
-        or ClockCell class.
-        """
-
-        node_name = match.group('name')
-        # Classify port class and non port class
-        if 'p' in node_name:
-            # Classify ClockSource and Port
-            if match.group('clk'):
-                self.graph.add_node(
-                    node_name, property=ClockSource(match.group('clk')))
-            else:
-                # Classify in port and out port
-                if self.graph.nodes[node_name]['direction'] == 's':
-                    self.graph.add_node(node_name, property=Port('in'))
-                    self.in_ports.append(node_name)
-                elif self.graph.nodes[node_name]['direction'] == 'l':
-                    self.graph.add_node(node_name, property=Port('out'))
-                    self.out_ports.append(node_name)
-                else:
-                    print("ERROR: Both in-degree and out-degree of port "
-                          f"{node_name} are nonzero\n"
-                          "node direction "
-                          f"{self.graph.nodes[node_name]['direction']}\n"
-                          )
-        else:
-            # Classify DFF and cell
-            if match.group('is_ff'):
-                # Classify DFF and (ClockCell, Power)
-                if match.group('clk'):
-                    self.graph.add_node(
-                        node_name, property=DFF(match.group('clk')))
-                    self.ff_nodes.append(node_name)
-                else:
-                    # Classify Power and ClockCell
-                    if self.graph.nodes[node_name]['direction'] == 's':
-                        # Remove Power node directly
-                        # self.graph.add_node(node_name, property=Power())
-                        self.graph.remove_node(node_name)
-                    elif self.graph.nodes[node_name]['direction'] == 's/l':
-                        self.graph.add_node(node_name, property=ClockCell())
-            else:
-                # What's the value of cell delay?
-                self.graph.add_node(node_name, property=Cell(1.0))
-
-    def _get_clock_path_delay(self, node: DFF | ClockCell) -> float:
-        """Get the clock source latency from clock source to this node
-
-        Node must be DFF or ClockCell. This method will find the predecessors
-        of node, one of its predecessors must be ClockSource or ClockCell.
-        If it's ClockSource, return the delay between ClockSource and the node.
-        If it's ClockCell, return the delay between ClockCell and the node
-        plus the value from _get_clock_path_delay(ClockCell).
-        """
-        for predecessor in self.graph.predecessors(node):
-            if type(self.graph.nodes[predecessor]['property']) == ClockSource:
-                return self.graph.edges[predecessor, node]['delay']
-            elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
-                return (self.graph.edges[predecessor, node]['delay']
-                        + self._get_clock_path_delay(predecessor))
-
-    def draw(self):
-        nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
-        plt.show()
+def is_good_path(path_nodes: list, ff_nodes: list):
+    """Check whether there is a DFF in the middle of path
+    
+    DFF can only be the first or last instance on a path. If a DFF is in the
+    middle of the path, this path is a bad path.
+    """
+    for node in path_nodes[1: -1]:
+        if node in ff_nodes:
+            return False
+    return True
 
 
-class Path:
-    def __init__(self, start_ff_index: int, path: list, net_graph: NetGraph):
-        self.start_ff_index = start_ff_index
-        self.data_arrival_time = 0
-        self.setup_expected_time = 0
-        self.hold_expected_time = 0
-        self.setup_slack = 0
-        self.hold_slack = 0
-        self.path = path
-        self.net_graph = net_graph
-        # Path report string, one path one string
-        self.path_report = ''
-        self._parse_path()
-
-        # Path property
-        if self.setup_slack < 0:
-            self.is_setup_violated = True
-        else:
-            self.is_setup_violated = False
-
-        if self.hold_slack < 0:
-            self.is_hold_violated = True
-        else:
-            self.is_hold_violated = False
-
-    def _parse_path(self):
-        # Add data arrival time
-        global path_index
-        path_index += 1
-        setup_report = f'path{path_index}:\n'
-        path_index += 1
-        hold_report = f'path{path_index}:\n'
-        data_arrival_time = f"{' ':4}data arrival time:\n"
-        # Add start flip flop delay
-        # If start is a port, use end flip flop clock
-        if self.net_graph.graph.nodes[self.path[0]]['is_in_port']:
-            node_attr = self.net_graph.graph.nodes[self.path[-1]]
-        else:
-            node_attr = self.net_graph.graph.nodes[self.path[0]]
-        clk = node_attr['clk']
-        period = self.net_graph.clk[clk]
-        # If start is a port, use default flip flop delay
-        if self.net_graph.graph.nodes[self.path[0]]['is_in_port']:
-            self.data_arrival_time += 1.
-        else:
-            self.data_arrival_time += node_attr['delay']
-        fpga = f"@FPGA{self.start_ff_index}"
-        data_arrival_time += (
-            f"{' ':4}{self.path[0]:<9}{fpga:<10}{node_attr['delay']:< 10.1f}"
-            f"{self.data_arrival_time:< 10.1f}\n"
-        )
-        # Add cable delay
-        for i in range(len(self.path) - 1):
-            edge_attr = self.net_graph.graph.edges[self.path[i],
-                                                   self.path[i + 1]]
-            if edge_attr['delay'] != 0:
-                self.data_arrival_time += edge_attr['delay']
-                data_arrival_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_attr['delay']:<+10.1f}"
-                    f"{self.data_arrival_time:< 10.1f}\n"
-                )
-        setup_report += data_arrival_time
-        hold_report += data_arrival_time
-
-        # Add setup expected time
-        setup_expected_time = (
-            f"{' ':4}data expected time:\n"
-        )
-        # Add clock period
-        self.setup_expected_time += period
-        setup_expected_time += (
-            f"{' ':4}{clk:<9}{'rise edge':<10}{period:< 10.1f}"
-            f"{self.setup_expected_time:< 10.1f}\n"
-        )
-        # Add clock cable delay
-        lanch_ff_ancestors = list(
-            self.net_graph.graph.predecessors(self.path[0]))
-        catch_ff_ancestors = list(
-            self.net_graph.graph.predecessors(self.path[-1]))
-        clk_source = [x for x in lanch_ff_ancestors if x in catch_ff_ancestors]
-        # Check whether clock path has clock cable delay
-        if len(clk_source) != 0:
-            clk_source = clk_source[0]
-            clk_cable_delay = (self.net_graph.graph.edges[clk_source, self.path[-1]]['delay']
-                               - self.net_graph.graph.edges[clk_source, self.path[0]]['delay'])
-            if clk_cable_delay != 0:
-                self.setup_expected_time += clk_cable_delay
-                setup_expected_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:<+10.1f}"
-                    f"{self.setup_expected_time:< 10.1f}\n"
-                )
-        # Minus Tsu
-        self.setup_expected_time -= self.net_graph.tsu
-        setup_expected_time += (
-            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
-            f"{self.setup_expected_time:< 10.1f}\n"
-        )
-        setup_report += setup_expected_time
-
-        # Add setup slack
-        setup_report += '--------------------------------\n'
-        self.setup_slack = self.setup_expected_time - self.data_arrival_time
-        setup_report += (
-            f"setup slack {self.setup_slack:.1f}\n{'=':=<80}\n"
-        )
-
-        # Add hold expected time
-        hold_expected_time = (
-            f"{' ':4}data expected time:\n"
-        )
-        # Add clock cable delay
-        if len(clk_source) != 0:
-            if clk_cable_delay != 0:
-                self.hold_expected_time += clk_cable_delay
-                hold_expected_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:< 10.1f}"
-                    f"{self.hold_expected_time:< 10.1f}\n"
-                )
-        # Add Thold
-        self.hold_expected_time += self.net_graph.thold
-        hold_expected_time += (
-            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
-            f"{self.hold_expected_time:< 10.1f}\n"
-        )
-        hold_report += hold_expected_time
-
-        # Add hold slack
-        hold_report += '--------------------------------\n'
-        self.hold_slack = self.data_arrival_time - self.hold_expected_time
-        hold_report += (
-            f"hold slack {self.hold_slack:.1f}\n{'=':=<80}\n"
-        )
-
-        self.path_report = setup_report + hold_report
-        pass
-
-
-data_path2 = 'data/grpout_2'
+data_path2 = 'data/grpout_1'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
-graph2 = NetGraph(data_path=data_path2)
-paths = []
+graph2 = ta.NetGraph(data_path=data_path2)
+# graph2.draw()
 
-# Define global path index
-path_index = 0
+paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
     # flip flop to flip flop
     for end_ff in graph2.ff_nodes:
         paths_nodes = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=end_ff)
         for path_nodes in paths_nodes:
-            path = Path(i, path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.FFToFFPath(path_nodes, graph2)
+                paths.append(path)
 
     # flip flop to out port
     for out_port in graph2.out_ports:
         paths_nodes = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=out_port)
         for path_nodes in paths_nodes:
-            # Check whether this path go through a flip flop. If it is, it is
-            # a bad path
-            bad_path = False
-            for node in path_nodes[1: -1]:
-                if node in graph2.ff_nodes:
-                    bad_path = True
-                    break
-            if bad_path:
-                continue
-
-            path = Path(i, path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.FFToOutPath(path_nodes, graph2)
+                paths.append(path)
 
 for in_port in graph2.in_ports:
     # in port to flip flop
@@ -370,25 +48,21 @@ for in_port in graph2.in_ports:
             graph2.graph, source=in_port, target=end_ff
         )
         for path_nodes in paths_nodes:
-            # Check whether this path go through a flip flop. If it is, it is
-            # a bad path
-            bad_path = False
-            for node in path_nodes[1: -1]:
-                if node in graph2.ff_nodes:
-                    bad_path = True
-                    break
-            if bad_path:
-                continue
-
-            path = Path(1, path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.InToFFPath(path_nodes, graph2)
+                paths.append(path)
 
 
-setup_violated_paths = [path for path in paths if path.is_setup_violated]
-hold_violated_paths = [path for path in paths if path.is_hold_violated]
+setup_violated_paths = [path for path in paths if not path.is_setup_violated]
+hold_violated_paths = [path for path in paths if not path.is_hold_violated]
 # Sort
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
+# Get top 20 paths
+if len(setup_violated_paths) > 20:
+    setup_violated_paths = setup_violated_paths[:20]
+if len(hold_violated_paths) > 20:
+    hold_violated_paths = hold_violated_paths[:20]
 total_setup_slack = 0
 total_hold_slack = 0
 for path in setup_violated_paths:
@@ -397,14 +71,31 @@ for path in hold_violated_paths:
     total_hold_slack += path.hold_slack
 
 sta_rpt = (
-    'total\n'
-    f'setup slack {total_setup_slack} ns\n'
-    f'hold slack {total_hold_slack} ns\n'
-    f'combinal Port delay: 0 ns\n'
+    f'Total setup slack {total_setup_slack} ns\n'
+    f'Total hold slack {total_hold_slack} ns\n'
+    f'Total combinal Port delay: 0 ns\n'
+    '\n\n'
 )
-for path in paths:
-    sta_rpt += path.path_report
+setup_index = 0
+setup_report = f'Top {len(setup_violated_paths)} setup violated paths:\n'
+for path in setup_violated_paths:
+    setup_index += 1
+    setup_report += f'{setup_index}   '
+    setup_report += path.setup_report
+setup_report += '\n\n'
 
+hold_index = 0
+hold_report = f'Top {len(hold_violated_paths)} hold violated paths:\n'
+for path in hold_violated_paths:
+    hold_index += 1
+    hold_report += f'{hold_index}   '
+    hold_report += path.hold_report
+setup_report += '\n\n'
+
+sta_rpt = sta_rpt + setup_report + hold_report
+
+# Check if path exists
+Path('./rpt').mkdir(parents=True, exist_ok=True)
 with open(f'rpt/sta_{case_name}.rpt', 'w') as fout:
     fout.write(sta_rpt)
     fout.close()
