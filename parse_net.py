@@ -8,15 +8,13 @@ case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 paths = []
 
-# Define global path index
-path_index = 0
 for i, start_ff in enumerate(graph2.ff_nodes):
     # flip flop to flip flop
     for end_ff in graph2.ff_nodes:
         paths_nodes = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=end_ff)
         for path_nodes in paths_nodes:
-            path = Path(i, path_nodes, graph2)
+            path = ta.FFToFFPath(path_nodes, graph2)
             paths.append(path)
 
     # flip flop to out port
@@ -34,7 +32,7 @@ for i, start_ff in enumerate(graph2.ff_nodes):
             if bad_path:
                 continue
 
-            path = Path(i, path_nodes, graph2)
+            path = ta.FFToOutPath(path_nodes, graph2)
             paths.append(path)
 
 for in_port in graph2.in_ports:
@@ -54,7 +52,7 @@ for in_port in graph2.in_ports:
             if bad_path:
                 continue
 
-            path = Path(1, path_nodes, graph2)
+            path = ta.InToFFPath(path_nodes, graph2)
             paths.append(path)
 
 
@@ -63,6 +61,11 @@ hold_violated_paths = [path for path in paths if path.is_hold_violated]
 # Sort
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
+# Get top 20 paths
+if len(setup_violated_paths) > 20:
+    setup_violated_paths = setup_violated_paths[:20]
+if len(hold_violated_paths) > 20:
+    hold_violated_paths = hold_violated_paths[:20]
 total_setup_slack = 0
 total_hold_slack = 0
 for path in setup_violated_paths:
@@ -71,13 +74,22 @@ for path in hold_violated_paths:
     total_hold_slack += path.hold_slack
 
 sta_rpt = (
-    'total\n'
-    f'setup slack {total_setup_slack} ns\n'
-    f'hold slack {total_hold_slack} ns\n'
-    f'combinal Port delay: 0 ns\n'
+    f'Total setup slack {total_setup_slack} ns\n'
+    f'Total hold slack {total_hold_slack} ns\n'
+    f'Total combinal Port delay: 0 ns\n'
+    '\n\n'
 )
-for path in paths:
-    sta_rpt += path.path_report
+setup_report = f'Top {len(setup_violated_paths)} setup violated paths:'
+for path in setup_violated_paths:
+    setup_report += path.setup_report
+setup_report += '\n\n'
+
+hold_report = f'Top {len(hold_violated_paths)} hold violated paths:'
+for path in hold_violated_paths:
+    hold_report += path.hold_report
+setup_report += '\n\n'
+
+sta_rpt = sta_rpt + setup_report + hold_report
 
 with open(f'rpt/sta_{case_name}.rpt', 'w') as fout:
     fout.write(sta_rpt)
