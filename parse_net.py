@@ -19,8 +19,9 @@ def is_good_path(path_nodes: list, ff_nodes: list):
 data_path2 = 'data/grpout_1'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
-paths = []
+# graph2.draw()
 
+paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
     # flip flop to flip flop
     for end_ff in graph2.ff_nodes:
