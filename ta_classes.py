@@ -167,8 +167,7 @@ class NetGraph:
                     elif self.graph.nodes[node_name]['direction'] == 's/l':
                         self.graph.add_node(node_name, property=ClockCell())
             else:
-                # What's the value of cell delay?
-                self.graph.add_node(node_name, property=Cell(1.0))
+                self.graph.add_node(node_name, property=Cell(0.1))
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
