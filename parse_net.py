@@ -1,12 +1,11 @@
 import re
 import networkx as nx
-import matplotlib.pyplot as plt
-from ta_classes import DFF, Cell, ClockCell, ClockSource, Port, Power
+import ta_classes as ta
 
 
 data_path2 = 'data/grpout_2'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
-graph2 = NetGraph(data_path=data_path2)
+graph2 = ta.NetGraph(data_path=data_path2)
 paths = []
 
 # Define global path index
