@@ -349,7 +349,7 @@ class FFToFFPath(Path):
         self.hold_report += data_arrival_time_report
 
         ### Add setup expected time ###
-        self.setup_report = (
+        self.setup_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock period
@@ -378,7 +378,7 @@ class FFToFFPath(Path):
         )
 
         ### Add hold expected time ###
-        self.hold_report = (
+        self.hold_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock source latency
@@ -442,7 +442,7 @@ class InToFFPath(Path):
         self.hold_report += data_arrival_time_report
 
         ### Add setup expected time ###
-        self.setup_report = (
+        self.setup_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock period
@@ -471,7 +471,7 @@ class InToFFPath(Path):
         )
 
         ### Add hold expected time ###
-        self.hold_report = (
+        self.hold_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock source latency
@@ -529,7 +529,7 @@ class FFToOutPath(Path):
         self.hold_report += data_arrival_time_report
 
         ### Add setup expected time ###
-        self.setup_report = (
+        self.setup_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock period
@@ -560,7 +560,7 @@ class FFToOutPath(Path):
         )
 
         ### Add hold expected time ###
-        self.hold_report = (
+        self.hold_report += (
             f"{' ':4}data expected time:\n"
         )
         # Add clock source latency
