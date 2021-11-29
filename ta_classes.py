@@ -418,7 +418,11 @@ class InToFFPath(Path):
         # this instance
         for i in range(len(self.path) - 1):
             # Add instance delay
-            instance = self.graph.nodes[self.path[i]]['property']
+            # Because first instance is 'in port', use catch FF instead
+            if i == 0:
+                instance = self.graph.nodes[self.path[-1]]['property']
+            else:
+                instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
             data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:< 10.1f}"
