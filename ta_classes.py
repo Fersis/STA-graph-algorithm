@@ -23,7 +23,7 @@ class DFF:
 
     def __init__(self, graph: nx.DiGraph, clk: str = ''):
         self.graph = graph
-        self.tco = 1.0
+        self.delay = 1.0
         self.clk = clk
         self.clock_source_latency = 0.0
         self.clock_delay_report = ''
@@ -111,6 +111,9 @@ class Path:
     def __init__(self, path: list, net_graph: NetGraph):
         self.path = path
         self.net_graph = net_graph
+        self.graph = net_graph.graph
+        self.start: DFF = self.graph.nodes[path[0]]['property']
+        self.end: DFF = self.graph.nodes[path[-1]]['property']
         self.data_arrival_time = 0
         self.setup_expected_time = 0
         self.hold_expected_time = 0
@@ -143,109 +146,84 @@ class FFToFFPath(Path):
         super().__init__(path, net_graph)
 
     def _parse_path(self):
-        # Add data arrival time
-        self.setup_report += f'path{self.path}:\n'
-        self.hold_report += f'path{self.path}:\n'
-        data_arrival_time = f"{' ':4}data arrival time:\n"
+        ### Add data arrival time ###
+        data_arrival_time_report = f'path {self.path}:\n'
+        data_arrival_time_report += f"{' ':4}data arrival time:\n"
         # Add clock source latency
-        self.net_graph
-        # Add start flip flop delay
-        node_attr = self.net_graph.graph.nodes[self.path[-1]]
-        clk = node_attr['clk']
-        period = self.net_graph.clk[clk]
-        # If start is a port, use default flip flop delay
-        if self.net_graph.graph.nodes[self.path[0]]['is_in_port']:
-            self.data_arrival_time += 1.
-        else:
-            self.data_arrival_time += node_attr['delay']
-        fpga = f"@FPGA{self.start_ff_index}"
-        data_arrival_time += (
-            f"{' ':4}{self.path[0]:<9}{fpga:<10}{node_attr['delay']:< 10.1f}"
-            f"{self.data_arrival_time:< 10.1f}\n"
-        )
-        # Add cable delay
+        self.data_arrival_time += self.start.clock_source_latency
+        data_arrival_time_report += self.start.clock_delay_report
+        # Iterate over path
+        # Each iteration, add an instance delay and a net delay behind
+        # this instance
         for i in range(len(self.path) - 1):
-            edge_attr = self.net_graph.graph.edges[self.path[i],
-                                                   self.path[i + 1]]
-            if edge_attr['delay'] != 0:
-                self.data_arrival_time += edge_attr['delay']
-                data_arrival_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_attr['delay']:<+10.1f}"
+            # Add instance delay
+            instance = self.graph.nodes[self.path[i]]['property']
+            self.data_arrival_time += instance.delay
+            data_arrival_time_report += (
+                f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:< 10.1f}"
+                f"{self.data_arrival_time:< 10.1f}\n"
+            )
+            # Add net delay
+            edge_delay = (
+                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+            # If no edge delay, skip it
+            if edge_delay:
+                self.data_arrival_time += edge_delay
+                data_arrival_time_report += (
+                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:< 10.1f}"
                     f"{self.data_arrival_time:< 10.1f}\n"
                 )
-        setup_report += data_arrival_time
-        hold_report += data_arrival_time
+        self.setup_report += data_arrival_time_report
+        self.hold_report += data_arrival_time_report
 
-        # Add setup expected time
-        setup_expected_time = (
+        ### Add setup expected time ###
+        self.setup_report = (
             f"{' ':4}data expected time:\n"
         )
         # Add clock period
+        catch_ff: DFF = self.graph.nodes[self.path[-1]]['property']
+        clk = catch_ff.clk
+        period = self.net_graph.clk[clk]
         self.setup_expected_time += period
-        setup_expected_time += (
+        self.setup_report += (
             f"{' ':4}{clk:<9}{'rise edge':<10}{period:< 10.1f}"
             f"{self.setup_expected_time:< 10.1f}\n"
         )
-        # Add clock cable delay
-        lanch_ff_ancestors = list(
-            self.net_graph.graph.predecessors(self.path[0]))
-        catch_ff_ancestors = list(
-            self.net_graph.graph.predecessors(self.path[-1]))
-        clk_source = [x for x in lanch_ff_ancestors if x in catch_ff_ancestors]
-        # Check whether clock path has clock cable delay
-        if len(clk_source) != 0:
-            clk_source = clk_source[0]
-            clk_cable_delay = (self.net_graph.graph.edges[clk_source, self.path[-1]]['delay']
-                               - self.net_graph.graph.edges[clk_source, self.path[0]]['delay'])
-            if clk_cable_delay != 0:
-                self.setup_expected_time += clk_cable_delay
-                setup_expected_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:<+10.1f}"
-                    f"{self.setup_expected_time:< 10.1f}\n"
-                )
+        # Add clock source latency
+        self.setup_expected_time += self.end.clock_source_latency
+        self.setup_report += self.end.clock_delay_report
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
-        setup_expected_time += (
+        self.setup_report += (
             f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:<+10.1f}"
             f"{self.setup_expected_time:< 10.1f}\n"
         )
-        setup_report += setup_expected_time
-
         # Add setup slack
-        setup_report += '--------------------------------\n'
+        self.setup_report += '--------------------------------\n'
         self.setup_slack = self.setup_expected_time - self.data_arrival_time
-        setup_report += (
+        self.setup_report += (
             f"setup slack {self.setup_slack:.1f}\n{'=':=<80}\n"
         )
 
-        # Add hold expected time
-        hold_expected_time = (
+        ### Add hold expected time ###
+        self.hold_report = (
             f"{' ':4}data expected time:\n"
         )
-        # Add clock cable delay
-        if len(clk_source) != 0:
-            if clk_cable_delay != 0:
-                self.hold_expected_time += clk_cable_delay
-                hold_expected_time += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{clk_cable_delay:< 10.1f}"
-                    f"{self.hold_expected_time:< 10.1f}\n"
-                )
+        # Add clock source latency
+        self.hold_expected_time += self.end.clock_source_latency
+        self.hold_report +=  self.end.clock_delay_report
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
-        hold_expected_time += (
+        self.hold_report += (
             f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:<+10.1f}"
             f"{self.hold_expected_time:< 10.1f}\n"
         )
-        hold_report += hold_expected_time
-
         # Add hold slack
-        hold_report += '--------------------------------\n'
+        self.hold_report += '--------------------------------\n'
         self.hold_slack = self.data_arrival_time - self.hold_expected_time
-        hold_report += (
+        self.hold_report += (
             f"hold slack {self.hold_slack:.1f}\n{'=':=<80}\n"
         )
-
-        self.path_report = setup_report + hold_report
 
 
 
