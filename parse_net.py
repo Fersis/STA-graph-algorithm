@@ -56,8 +56,8 @@ for in_port in graph2.in_ports:
             paths.append(path)
 
 
-setup_violated_paths = [path for path in paths if path.is_setup_violated]
-hold_violated_paths = [path for path in paths if path.is_hold_violated]
+setup_violated_paths = [path for path in paths if not path.is_setup_violated]
+hold_violated_paths = [path for path in paths if not path.is_hold_violated]
 # Sort
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
@@ -79,13 +79,19 @@ sta_rpt = (
     f'Total combinal Port delay: 0 ns\n'
     '\n\n'
 )
-setup_report = f'Top {len(setup_violated_paths)} setup violated paths:'
+setup_index = 0
+setup_report = f'Top {len(setup_violated_paths)} setup violated paths:\n'
 for path in setup_violated_paths:
+    setup_index += 1
+    setup_report += f'{setup_index}   '
     setup_report += path.setup_report
 setup_report += '\n\n'
 
-hold_report = f'Top {len(hold_violated_paths)} hold violated paths:'
+hold_index = 0
+hold_report = f'Top {len(hold_violated_paths)} hold violated paths:\n'
 for path in hold_violated_paths:
+    hold_index += 1
+    hold_report += f'{hold_index}   '
     hold_report += path.hold_report
 setup_report += '\n\n'
 
