@@ -1,9 +1,22 @@
 import re
 import networkx as nx
 import ta_classes as ta
+from pathlib import Path
 
 
-data_path2 = 'data/grpout_2'
+def is_good_path(path_nodes: list, ff_nodes: list):
+    """Check whether there is a DFF in the middle of path
+    
+    DFF can only be the first or last instance on a path. If a DFF is in the
+    middle of the path, this path is a bad path.
+    """
+    for node in path_nodes[1: -1]:
+        if node in ff_nodes:
+            return False
+    return True
+
+
+data_path2 = 'data/grpout_1'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 paths = []
@@ -14,26 +27,18 @@ for i, start_ff in enumerate(graph2.ff_nodes):
         paths_nodes = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=end_ff)
         for path_nodes in paths_nodes:
-            path = ta.FFToFFPath(path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.FFToFFPath(path_nodes, graph2)
+                paths.append(path)
 
     # flip flop to out port
     for out_port in graph2.out_ports:
         paths_nodes = nx.all_simple_paths(
             graph2.graph, source=start_ff, target=out_port)
         for path_nodes in paths_nodes:
-            # Check whether this path go through a flip flop. If it is, it is
-            # a bad path
-            bad_path = False
-            for node in path_nodes[1: -1]:
-                if node in graph2.ff_nodes:
-                    bad_path = True
-                    break
-            if bad_path:
-                continue
-
-            path = ta.FFToOutPath(path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.FFToOutPath(path_nodes, graph2)
+                paths.append(path)
 
 for in_port in graph2.in_ports:
     # in port to flip flop
@@ -42,18 +47,9 @@ for in_port in graph2.in_ports:
             graph2.graph, source=in_port, target=end_ff
         )
         for path_nodes in paths_nodes:
-            # Check whether this path go through a flip flop. If it is, it is
-            # a bad path
-            bad_path = False
-            for node in path_nodes[1: -1]:
-                if node in graph2.ff_nodes:
-                    bad_path = True
-                    break
-            if bad_path:
-                continue
-
-            path = ta.InToFFPath(path_nodes, graph2)
-            paths.append(path)
+            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
+                path = ta.InToFFPath(path_nodes, graph2)
+                paths.append(path)
 
 
 setup_violated_paths = [path for path in paths if not path.is_setup_violated]
@@ -97,6 +93,8 @@ setup_report += '\n\n'
 
 sta_rpt = sta_rpt + setup_report + hold_report
 
+# Check if path exists
+Path('./rpt').mkdir(parents=True, exist_ok=True)
 with open(f'rpt/sta_{case_name}.rpt', 'w') as fout:
     fout.write(sta_rpt)
     fout.close()
