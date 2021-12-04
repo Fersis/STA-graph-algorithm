@@ -5,7 +5,7 @@ import ta_functions as taf
 from pathlib import Path
 
 
-data_path2 = 'data/grpout_1'
+data_path2 = 'data/testdata_1_updata'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 # graph2.draw()
@@ -48,8 +48,8 @@ for path in hold_violated_paths:
     total_hold_slack += path.hold_slack
 
 sta_rpt = (
-    f'Total setup slack {total_setup_slack} ns\n'
-    f'Total hold slack {total_hold_slack} ns\n'
+    f'Total setup slack {total_setup_slack:.1f} ns\n'
+    f'Total hold slack {total_hold_slack:.1f} ns\n'
     f'Total combinal Port delay: 0 ns\n'
     '\n\n'
 )
