@@ -1,19 +1,8 @@
 import re
 import networkx as nx
 import ta_classes as ta
+import ta_functions as taf
 from pathlib import Path
-
-
-def is_good_path(path_nodes: list, ff_nodes: list):
-    """Check whether there is a DFF in the middle of path
-    
-    DFF can only be the first or last instance on a path. If a DFF is in the
-    middle of the path, this path is a bad path.
-    """
-    for node in path_nodes[1: -1]:
-        if node in ff_nodes:
-            return False
-    return True
 
 
 data_path2 = 'data/grpout_1'
@@ -23,34 +12,22 @@ graph2 = ta.NetGraph(data_path=data_path2)
 
 paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
-    # flip flop to flip flop
-    for end_ff in graph2.ff_nodes:
-        paths_nodes = nx.all_simple_paths(
-            graph2.graph, source=start_ff, target=end_ff)
-        for path_nodes in paths_nodes:
-            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
-                path = ta.FFToFFPath(path_nodes, graph2)
-                paths.append(path)
-
-    # flip flop to out port
-    for out_port in graph2.out_ports:
-        paths_nodes = nx.all_simple_paths(
-            graph2.graph, source=start_ff, target=out_port)
-        for path_nodes in paths_nodes:
-            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
-                path = ta.FFToOutPath(path_nodes, graph2)
-                paths.append(path)
+    for path_nodes in taf.get_paths(graph2.graph, start_ff):
+        # flip flop to flip flop
+        if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
+            path = ta.FFToFFPath(path_nodes, graph2)
+            paths.append(path)
+        # flip flop to out port
+        elif isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.Port):
+            path = ta.FFToOutPath(path_nodes, graph2)
+            paths.append(path)
 
 for in_port in graph2.in_ports:
-    # in port to flip flop
-    for end_ff in graph2.ff_nodes:
-        paths_nodes = nx.all_simple_paths(
-            graph2.graph, source=in_port, target=end_ff
-        )
-        for path_nodes in paths_nodes:
-            if is_good_path(path_nodes=path_nodes, ff_nodes=graph2.ff_nodes):
-                path = ta.InToFFPath(path_nodes, graph2)
-                paths.append(path)
+    for path_nodes in taf.get_paths(graph2.graph, in_port):
+        # in port to flip flop
+        if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
+            path = ta.InToFFPath(path_nodes, graph2)
+            paths.append(path)
 
 
 setup_violated_paths = [path for path in paths if not path.is_setup_violated]
