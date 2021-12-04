@@ -72,7 +72,9 @@ class NetGraph:
         self.clk = {}
         for line in lines:
             match = re.search(r'(?P<clk>c\d+)   (?P<freq>\d+)', line)
-            self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
+            # Check whether match or not
+            if match:
+                self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
 
         # Read design.tdm
         tdm_path = data_path + '/design.tdm'
