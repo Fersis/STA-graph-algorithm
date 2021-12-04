@@ -11,7 +11,7 @@ def get_paths(G: nx.DiGraph, start) -> list:
     search all children of this child.
     """
     for node in G[start]:
-        if type(G.nodes[node]['property']) == ta.DFF | ta.Port:
+        if isinstance(G.nodes[node]['property'], ta.DFF | ta.Port):
             yield [start, node]
         else:
             for child in get_paths(G, node):
