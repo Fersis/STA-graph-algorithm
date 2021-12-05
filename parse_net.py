@@ -5,52 +5,62 @@ import ta_functions as taf
 from pathlib import Path
 
 
-data_path2 = 'data/testdata_1_updata'
+data_path2 = 'data/grpout_1'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 # graph2.draw()
 
-paths = []
+sequential_paths = []
+comb_paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
     for path_nodes in taf.get_paths(graph2.graph, start_ff):
         # flip flop to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
             path = ta.FFToFFPath(path_nodes, graph2)
-            paths.append(path)
+            sequential_paths.append(path)
         # flip flop to out port
         elif isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.Port):
             path = ta.FFToOutPath(path_nodes, graph2)
-            paths.append(path)
+            sequential_paths.append(path)
 
 for in_port in graph2.in_ports:
     for path_nodes in taf.get_paths(graph2.graph, in_port):
         # in port to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
             path = ta.InToFFPath(path_nodes, graph2)
-            paths.append(path)
+            sequential_paths.append(path)
+        # in port to out port
+        elif isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.Port):
+            path = ta.InToOutPath(path_nodes, graph2)
+            comb_paths.append(path)
 
 
-setup_violated_paths = [path for path in paths if not path.is_setup_violated]
-hold_violated_paths = [path for path in paths if not path.is_hold_violated]
+# setup_violated_paths = [path for path in sequential_paths if path.is_setup_violated]
+# hold_violated_paths = [path for path in sequential_paths if path.is_hold_violated]
+setup_violated_paths = sequential_paths.copy()
+hold_violated_paths = sequential_paths.copy()
 # Sort
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
 # Get top 20 paths
-if len(setup_violated_paths) > 20:
-    setup_violated_paths = setup_violated_paths[:20]
-if len(hold_violated_paths) > 20:
-    hold_violated_paths = hold_violated_paths[:20]
+# if len(setup_violated_paths) > 20:
+#     setup_violated_paths = setup_violated_paths[:20]
+# if len(hold_violated_paths) > 20:
+#     hold_violated_paths = hold_violated_paths[:20]
 total_setup_slack = 0
 total_hold_slack = 0
+total_combinational_delay = 0
 for path in setup_violated_paths:
     total_setup_slack += path.setup_slack
 for path in hold_violated_paths:
     total_hold_slack += path.hold_slack
+for path in comb_paths:
+    total_combinational_delay += path.delay
 
 sta_rpt = (
     f'Total setup slack {total_setup_slack:.1f} ns\n'
     f'Total hold slack {total_hold_slack:.1f} ns\n'
-    f'Total combinal Port delay: 0 ns\n'
+    f'Total combinal Port delay: {total_combinational_delay:.1f} ns\n'
     '\n\n'
 )
 setup_index = 0
@@ -67,9 +77,17 @@ for path in hold_violated_paths:
     hold_index += 1
     hold_report += f'{hold_index}   '
     hold_report += path.hold_report
+hold_report += '\n\n'
+
+comb_index = 0
+comb_report = f'Top {len(comb_paths)} combinational critical paths:\n'
+for path in comb_paths:
+    comb_index += 1
+    comb_report += f'{comb_index}   '
+    comb_report += path.report
 setup_report += '\n\n'
 
-sta_rpt = sta_rpt + setup_report + hold_report
+sta_rpt = sta_rpt + setup_report + hold_report + comb_report
 
 # Check if path exists
 Path('./rpt').mkdir(parents=True, exist_ok=True)

@@ -605,6 +605,7 @@ class InToOutPath():
         self._parse_path()
 
     def _parse_path(self):
+        self.report += f'path {self.path}:\n'
         # Iterate over path
         # Each iteration, add an instance delay and a net delay behind
         # this instance
