@@ -1,11 +1,10 @@
 import re
-import networkx as nx
 import ta_classes as ta
 import ta_functions as taf
 from pathlib import Path
 
 
-data_path2 = 'data/grpout_1'
+data_path2 = 'data/testdata_5_updata'
 case_name = re.search(r'.+/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 # graph2.draw()
@@ -43,10 +42,10 @@ hold_violated_paths = sequential_paths.copy()
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
 # Get top 20 paths
-# if len(setup_violated_paths) > 20:
-#     setup_violated_paths = setup_violated_paths[:20]
-# if len(hold_violated_paths) > 20:
-#     hold_violated_paths = hold_violated_paths[:20]
+if len(setup_violated_paths) > 100:
+    setup_violated_paths = setup_violated_paths[:100]
+if len(hold_violated_paths) > 100:
+    hold_violated_paths = hold_violated_paths[:100]
 total_setup_slack = 0
 total_hold_slack = 0
 total_combinational_delay = 0

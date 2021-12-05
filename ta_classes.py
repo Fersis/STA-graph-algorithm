@@ -3,6 +3,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from typing_extensions import Self
 
+from networkx.classes import graph
+
 
 class NetGraph:
     def __init__(self, data_path) -> None:
@@ -131,6 +133,10 @@ class NetGraph:
         """
 
         node_name = match.group('name')
+        # Note! A node might not be in graph(such as a floating GND). In this
+        # case, we just ignore it.
+        if node_name not in self.graph:
+            return
         # Classify port class and non port class
         if 'p' in node_name:
             # Classify ClockSource and Port
