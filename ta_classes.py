@@ -585,3 +585,52 @@ class FFToOutPath(Path):
             f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.1f}\n"
             f"{'=':=<80}\n"
         )
+
+
+class InToOutPath():
+    """Path from in port to out port
+    
+    This path is different from sequential path. It doesn't compute timing
+    slack, it only computes delay. So this class doesn't inherit Path class.
+    """
+
+    def __init__(self, path: list, net_graph: NetGraph):
+        self.path = path
+        self.net_graph = net_graph
+        self.graph = net_graph.graph
+        self.delay = 0.0
+        # Combinational path doesn't do setup anlysis and hold anlysis,
+        # so it only has one report.
+        self.report = ''
+        self._parse_path()
+
+    def _parse_path(self):
+        # Iterate over path
+        # Each iteration, add an instance delay and a net delay behind
+        # this instance
+        for i in range(len(self.path) - 1):
+            # Add instance delay
+            # For the first instance, it doesn't have any delay infomation,
+            # just ignore it.
+            if i != 0:
+                instance = self.graph.nodes[self.path[i]]['property']
+                self.delay += instance.delay
+                self.report += (
+                    f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
+                    f"{self.delay:> 10.1f}\n"
+                )
+            # Add net delay
+            edge_delay = (
+                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+            # If no edge delay, skip it
+            if edge_delay:
+                self.delay += edge_delay
+                self.report += (
+                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                    f"{self.delay:> 10.1f}\n"
+                )
+
+        self.report += (
+            f"{' ':4}{'Combinational Port Delay:':<29}{self.delay:> 10.1f}\n"
+            f"{'=':=<80}\n"
+        )
