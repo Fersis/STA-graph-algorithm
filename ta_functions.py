@@ -18,3 +18,10 @@ def get_paths(G: nx.DiGraph, start, path_behind: list) -> list:
             else:
                 for child in get_paths(G, node, path_behind):
                     yield [start] + child
+
+def find_path_with_loops(G: nx.DiGraph, source):
+    for node in G[source]:
+        if isinstance(G.nodes[node]['property'], ta.DFF | ta.Port):
+            return (source, node)
+        else:
+            
