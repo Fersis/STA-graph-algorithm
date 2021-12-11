@@ -23,7 +23,7 @@ def get_paths_with_loops(G: nx.DiGraph, start, path_behind):
     for node in G[start]:
         if G.out_degree[start] > 1:
             if node not in path_behind:
-                if G.out_degree[node] == 0:
+                if isinstance(G.nodes[node]['property'], ta.DFF | ta.Port):
                     yield [start, node]
                 else:
                     for child in get_paths_with_loops(G, node, path_behind):
@@ -31,7 +31,7 @@ def get_paths_with_loops(G: nx.DiGraph, start, path_behind):
             else:
                 continue
         else:
-            if G.out_degree[node] == 0:
+            if isinstance(G.nodes[node]['property'], ta.DFF | ta.Port):
                 yield [start, node]
             else:
                 for child in get_paths_with_loops(G, node, path_behind):
