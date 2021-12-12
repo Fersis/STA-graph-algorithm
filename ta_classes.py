@@ -10,6 +10,41 @@ class NetGraph:
     def __init__(self, data_path) -> None:
         data_path = data_path
 
+        # Read design.tdm
+        tdm_path = data_path + '/design.tdm'
+        with open(tdm_path) as f:
+            lines = f.readlines()
+
+        self.tdm = {}
+        pattern1 = r'(?P<tdm>t\d+)  (?P<freq>[\d\.]+).+?(?P<bias>\d+)'
+        pattern2 = r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+).+?(?P<freq>[\d\.]+)'
+        pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
+        for line in lines:
+            match = re.search(pattern1, line)
+            if match:
+                tdm = {}
+                tdm['freq'] = match.group('freq')
+                tdm['bias'] = match.group('bias')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+            match = re.search(pattern2, line)
+            if match:
+                tdm = {}
+                tdm['bias'] = match.group('bias')
+                tdm['base'] = match.group('base')
+                tdm['freq'] = match.group('freq')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+            match = re.search(pattern3, line)
+            if match:
+                tdm = {}
+                tdm['base'] = match.group('base')
+                tdm_name = match.group('tdm')
+                self.tdm[tdm_name] = tdm
+                continue
+
         # Read design.net
         net_path = data_path + '/design.net'
         with open(net_path) as f:
@@ -45,7 +80,7 @@ class NetGraph:
                     self.graph.add_edge(start, end,
                                         delay=float(nodes[j]['delay']))
                 elif nodes[j]['tdm']:
-                    ratio = nodes[j]['ratio']
+                    ratio = float(nodes[j]['ratio'])
                     delay = self._cal_tdm_delay(nodes[j]['tdm'], ratio)
                     self.graph.add_edge(start, end, delay=float(delay))
                 else:
@@ -81,41 +116,6 @@ class NetGraph:
             # Check whether match or not
             if match:
                 self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
-
-        # Read design.tdm
-        tdm_path = data_path + '/design.tdm'
-        with open(tdm_path) as f:
-            lines = f.readlines()
-
-        self.tdm = {}
-        pattern1 = r'(?P<tdm>t\d+)  (?P<freq>[\d\.]+).+?(?P<bias>\d+)'
-        pattern2 = r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+).+?(?P<freq>[\d\.]+)'
-        pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
-        for line in lines:
-            match = re.search(pattern1, line)
-            if match:
-                tdm = {}
-                tdm['freq'] = match.group('freq')
-                tdm['bias'] = match.group('bias')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
-            match = re.search(pattern2, line)
-            if match:
-                tdm = {}
-                tdm['bias'] = match.group('bias')
-                tdm['base'] = match.group('base')
-                tdm['freq'] = match.group('freq')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
-            match = re.search(pattern3, line)
-            if match:
-                tdm = {}
-                tdm['base'] = match.group('base')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
 
         # Fixed parameters
         self.tsu = 1.
@@ -183,15 +183,15 @@ class NetGraph:
 
     def _cal_tdm_delay(self, tdm_name, ratio):
         if tdm_name == 't0':
-            bias = self.tdm['t0']['bias']
-            base = self.tdm['t0']['base']
-            freq = self.tdm['t0']['freq']
+            bias = float(self.tdm['t0']['bias'])
+            base = float(self.tdm['t0']['base'])
+            freq = float(self.tdm['t0']['freq'])
             delay = (bias + ratio/base)/freq
         elif tdm_name == 't1':
-            base = self.tdm['t1']['base']
+            base = float(self.tdm['t1']['base'])
             delay = ratio/base
         elif tdm_name == 't2':
-            base = self.tdm['t2']['base']
+            base = float(self.tdm['t2']['base'])
             delay = ratio/base
 
         return delay
