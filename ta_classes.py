@@ -82,7 +82,7 @@ class NetGraph:
                 elif nodes[j]['tdm']:
                     ratio = float(nodes[j]['ratio'])
                     delay = self._cal_tdm_delay(nodes[j]['tdm'], ratio)
-                    self.graph.add_edge(start, end, delay=float(delay))
+                    self.graph.add_edge(start, end, tdm_delay=float(delay))
                 else:
                     self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
@@ -362,13 +362,22 @@ class FFToFFPath(Path):
                 f"{self.data_arrival_time:> 10.1f}\n"
             )
             # Add net delay
-            edge_delay = (
-                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-            # If no edge delay, skip it
-            if edge_delay:
+            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+                # If no edge delay, skip it
+                if edge_delay:
+                    self.data_arrival_time += edge_delay
+                    data_arrival_time_report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                        f"{self.data_arrival_time:> 10.1f}\n"
+                    )
+            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
                     f"{self.data_arrival_time:> 10.1f}\n"
                 )
         self.setup_report += data_arrival_time_report
@@ -457,13 +466,22 @@ class InToFFPath(Path):
                 f"{self.data_arrival_time:> 10.1f}\n"
             )
             # Add net delay
-            edge_delay = (
-                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-            # If no edge delay, skip it
-            if edge_delay:
+            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+                # If no edge delay, skip it
+                if edge_delay:
+                    self.data_arrival_time += edge_delay
+                    data_arrival_time_report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                        f"{self.data_arrival_time:> 10.1f}\n"
+                    )
+            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
                     f"{self.data_arrival_time:> 10.1f}\n"
                 )
         self.setup_report += data_arrival_time_report
@@ -546,13 +564,22 @@ class FFToOutPath(Path):
                 f"{self.data_arrival_time:> 10.1f}\n"
             )
             # Add net delay
-            edge_delay = (
-                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-            # If no edge delay, skip it
-            if edge_delay:
+            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+                # If no edge delay, skip it
+                if edge_delay:
+                    self.data_arrival_time += edge_delay
+                    data_arrival_time_report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                        f"{self.data_arrival_time:> 10.1f}\n"
+                    )
+            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
                     f"{self.data_arrival_time:> 10.1f}\n"
                 )
         self.setup_report += data_arrival_time_report
@@ -646,13 +673,22 @@ class InToOutPath():
                     f"{self.delay:> 10.1f}\n"
                 )
             # Add net delay
-            edge_delay = (
-                self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-            # If no edge delay, skip it
-            if edge_delay:
+            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
+                # If no edge delay, skip it
+                if edge_delay:
+                    self.delay += edge_delay
+                    self.report += (
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                        f"{self.delay:> 10.1f}\n"
+                    )
+            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
+                edge_delay = (
+                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.delay += edge_delay
                 self.report += (
-                    f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
                     f"{self.delay:> 10.1f}\n"
                 )
 
