@@ -240,20 +240,36 @@ class DFF:
 
         for predecessor in self.graph.predecessors(node):
             if type(self.graph.nodes[predecessor]['property']) == ClockSource:
-                delay = self.graph.edges[predecessor, node]['delay']
-                if delay:
+                if 'delay' in self.graph.edges[predecessor, node].keys():
+                    delay = self.graph.edges[predecessor, node]['delay']
+                    if delay:
+                        self.clock_source_latency += delay
+                        self.clock_delay_report += (
+                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
+                            f"{self.clock_source_latency:> 10.1f}\n"
+                        )
+                elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
+                    delay = self.graph.edges[predecessor, node]['tdm_delay']
                     self.clock_source_latency += delay
                     self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
+                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.1f}"
                         f"{self.clock_source_latency:> 10.1f}\n"
                     )
                 return
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
-                delay = self.graph.edges[predecessor, node]['delay']
-                if delay:
+                if 'delay' in self.graph.edges[predecessor, node].keys():
+                    delay = self.graph.edges[predecessor, node]['delay']
+                    if delay:
+                        self.clock_source_latency += delay
+                        self.clock_delay_report += (
+                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
+                            f"{self.clock_source_latency:> 10.1f}\n"
+                        )
+                elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
+                    delay = self.graph.edges[predecessor, node]['tdm_delay']
                     self.clock_source_latency += delay
                     self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
+                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.1f}"
                         f"{self.clock_source_latency:> 10.1f}\n"
                     )
                 return self.get_clock_path_delay(predecessor)
