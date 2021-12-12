@@ -2,17 +2,19 @@ import re
 import ta_classes as ta
 import ta_functions as taf
 from pathlib import Path
+import networkx as nx
 
 
-data_path2 = 'data/testdata_5_updata'
-case_name = re.search(r'.+/(.+)', data_path2)[1]
+data_path2 = 'data/testcase_10_29/testdata_3'
+case_name = re.search(r'.*/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 # graph2.draw()
 
 sequential_paths = []
 comb_paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
-    for path_nodes in taf.get_paths(graph2.graph, start_ff):
+    for path_nodes in taf.get_paths_no_loop(graph2.graph, start_ff, []):
+        # print(path_nodes)
         # flip flop to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
             path = ta.FFToFFPath(path_nodes, graph2)
@@ -23,7 +25,8 @@ for i, start_ff in enumerate(graph2.ff_nodes):
             sequential_paths.append(path)
 
 for in_port in graph2.in_ports:
-    for path_nodes in taf.get_paths(graph2.graph, in_port):
+    for path_nodes in taf.get_paths_no_loop(graph2.graph, in_port, []):
+        # print(path_nodes)
         # in port to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
             path = ta.InToFFPath(path_nodes, graph2)
