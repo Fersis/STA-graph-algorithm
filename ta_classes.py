@@ -18,7 +18,7 @@ class NetGraph:
         nodes = []
         for line in lines:
             nodes.append(re.search(
-                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?(?P<delay>\d+)?',
+                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?(?:(?P<delay>\d+)|(?P<tdm>t\d+)r(?P<ratio>\d+))?',
                 line))
 
         # Get all indexes of split points
@@ -44,6 +44,10 @@ class NetGraph:
                 if nodes[j]['delay']:
                     self.graph.add_edge(start, end,
                                         delay=float(nodes[j]['delay']))
+                elif nodes[j]['tdm']:
+                    ratio = nodes[j]['ratio']
+                    delay = self._cal_tdm_delay(nodes[j]['tdm'], ratio)
+                    self.graph.add_edge(start, end, delay=float(delay))
                 else:
                     self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
@@ -176,6 +180,21 @@ class NetGraph:
                         self.graph.add_node(node_name, property=ClockCell())
             else:
                 self.graph.add_node(node_name, property=Cell(0.1))
+
+    def _cal_tdm_delay(self, tdm_name, ratio):
+        if tdm_name == 't0':
+            bias = self.tdm['t0']['bias']
+            base = self.tdm['t0']['base']
+            freq = self.tdm['t0']['freq']
+            delay = (bias + ratio/base)/freq
+        elif tdm_name == 't1':
+            base = self.tdm['t1']['base']
+            delay = ratio/base
+        elif tdm_name == 't2':
+            base = self.tdm['t2']['base']
+            delay = ratio/base
+
+        return delay
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
