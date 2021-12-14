@@ -24,4 +24,4 @@ def find_path_with_loops(G: nx.DiGraph, source):
         if isinstance(G.nodes[node]['property'], ta.DFF | ta.Port):
             return (source, node)
         else:
-            
+            pass
