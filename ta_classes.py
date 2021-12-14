@@ -1,9 +1,6 @@
 import re
 import networkx as nx
 import matplotlib.pyplot as plt
-from typing_extensions import Self
-
-from networkx.classes import graph
 
 
 class NetGraph:
