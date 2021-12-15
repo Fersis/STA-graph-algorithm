@@ -1,6 +1,6 @@
 import re
 import networkx as nx
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 class NetGraph:
@@ -266,15 +266,15 @@ class DFF:
                     if delay:
                         self.clock_source_latency += delay
                         self.clock_delay_report += (
-                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
-                            f"{self.clock_source_latency:> 10.1f}\n"
+                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                            f"{self.clock_source_latency:> 10.3f}\n"
                         )
                 elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
                     delay = self.graph.edges[predecessor, node]['tdm_delay']
                     self.clock_source_latency += delay
                     self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.1f}"
-                        f"{self.clock_source_latency:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                        f"{self.clock_source_latency:> 10.3f}\n"
                     )
                 return
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
@@ -283,15 +283,15 @@ class DFF:
                     if delay:
                         self.clock_source_latency += delay
                         self.clock_delay_report += (
-                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.1f}"
-                            f"{self.clock_source_latency:> 10.1f}\n"
+                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                            f"{self.clock_source_latency:> 10.3f}\n"
                         )
                 elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
                     delay = self.graph.edges[predecessor, node]['tdm_delay']
                     self.clock_source_latency += delay
                     self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.1f}"
-                        f"{self.clock_source_latency:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                        f"{self.clock_source_latency:> 10.3f}\n"
                     )
                 return self.get_clock_path_delay(predecessor)
 
@@ -396,8 +396,8 @@ class FFToFFPath(Path):
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
             data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
-                f"{self.data_arrival_time:> 10.1f}\n"
+                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
             if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
@@ -407,16 +407,16 @@ class FFToFFPath(Path):
                 if edge_delay:
                     self.data_arrival_time += edge_delay
                     data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
-                        f"{self.data_arrival_time:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
+                        f"{self.data_arrival_time:> 10.3f}\n"
                     )
             elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
                 edge_delay = (
                     self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
-                    f"{self.data_arrival_time:> 10.1f}\n"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
+                    f"{self.data_arrival_time:> 10.3f}\n"
                 )
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
@@ -431,8 +431,8 @@ class FFToFFPath(Path):
         period = self.net_graph.clk[clk]
         self.setup_expected_time += period
         self.setup_report += (
-            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add clock source latency
         self.setup_expected_time += self.end.clock_source_latency
@@ -440,14 +440,14 @@ class FFToFFPath(Path):
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
         self.setup_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add setup slack
         self.setup_report += f"{'-':-<43}\n"
         self.setup_slack = self.setup_expected_time - self.data_arrival_time
         self.setup_report += (
-            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.1f}\n"
+            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -461,14 +461,14 @@ class FFToFFPath(Path):
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         self.hold_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.1f}"
-            f"{self.hold_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.3f}"
+            f"{self.hold_expected_time:> 10.3f}\n"
         )
         # Add hold slack
         self.hold_report += f"{'-':-<43}\n"
         self.hold_slack = self.data_arrival_time - self.hold_expected_time
         self.hold_report += (
-            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.1f}\n"
+            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -502,8 +502,8 @@ class InToFFPath(Path):
                 group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time += instance.delay
             data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
-                f"{self.data_arrival_time:> 10.1f}\n"
+                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
             if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
@@ -513,16 +513,16 @@ class InToFFPath(Path):
                 if edge_delay:
                     self.data_arrival_time += edge_delay
                     data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
-                        f"{self.data_arrival_time:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
+                        f"{self.data_arrival_time:> 10.3f}\n"
                     )
             elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
                 edge_delay = (
                     self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
-                    f"{self.data_arrival_time:> 10.1f}\n"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
+                    f"{self.data_arrival_time:> 10.3f}\n"
                 )
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
@@ -537,8 +537,8 @@ class InToFFPath(Path):
         period = self.net_graph.clk[clk]
         self.setup_expected_time += period
         self.setup_report += (
-            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add clock source latency
         self.setup_expected_time += self.end.clock_source_latency
@@ -546,14 +546,14 @@ class InToFFPath(Path):
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
         self.setup_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add setup slack
         self.setup_report += f"{'-':-<43}\n"
         self.setup_slack = self.setup_expected_time - self.data_arrival_time
         self.setup_report += (
-            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.1f}\n"
+            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -567,14 +567,14 @@ class InToFFPath(Path):
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         self.hold_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.1f}"
-            f"{self.hold_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.3f}"
+            f"{self.hold_expected_time:> 10.3f}\n"
         )
         # Add hold slack
         self.hold_report += f"{'-':-<43}\n"
         self.hold_slack = self.data_arrival_time - self.hold_expected_time
         self.hold_report += (
-            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.1f}\n"
+            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -601,8 +601,8 @@ class FFToOutPath(Path):
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
             data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
-                f"{self.data_arrival_time:> 10.1f}\n"
+                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
             if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
@@ -612,16 +612,16 @@ class FFToOutPath(Path):
                 if edge_delay:
                     self.data_arrival_time += edge_delay
                     data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
-                        f"{self.data_arrival_time:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
+                        f"{self.data_arrival_time:> 10.3f}\n"
                     )
             elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
                 edge_delay = (
                     self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.data_arrival_time += edge_delay
                 data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
-                    f"{self.data_arrival_time:> 10.1f}\n"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
+                    f"{self.data_arrival_time:> 10.3f}\n"
                 )
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
@@ -638,8 +638,8 @@ class FFToOutPath(Path):
         period = self.net_graph.clk[clk]
         self.setup_expected_time += period
         self.setup_report += (
-            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{clk:<9}{'rise edge':<10}{period:> 10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add clock source latency
         self.setup_expected_time += self.start.clock_source_latency
@@ -647,14 +647,14 @@ class FFToOutPath(Path):
         # Minus Tsu
         self.setup_expected_time -= self.net_graph.tsu
         self.setup_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.1f}"
-            f"{self.setup_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Tsu':<10}{-self.net_graph.tsu:>+10.3f}"
+            f"{self.setup_expected_time:> 10.3f}\n"
         )
         # Add setup slack
         self.setup_report += f"{'-':-<43}\n"
         self.setup_slack = self.setup_expected_time - self.data_arrival_time
         self.setup_report += (
-            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.1f}\n"
+            f"{' ':4}{'setup slack':<19}{self.setup_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -668,14 +668,14 @@ class FFToOutPath(Path):
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         self.hold_report += (
-            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.1f}"
-            f"{self.hold_expected_time:> 10.1f}\n"
+            f"{' ':4}{self.path[-1]:<9}{'Thold':<10}{self.net_graph.tsu:> 10.3f}"
+            f"{self.hold_expected_time:> 10.3f}\n"
         )
         # Add hold slack
         self.hold_report += f"{'-':-<43}\n"
         self.hold_slack = self.data_arrival_time - self.hold_expected_time
         self.hold_report += (
-            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.1f}\n"
+            f"{' ':4}{'hold slack':<19}{self.hold_slack:> 20.3f}\n"
             f"{'=':=<80}\n"
         )
 
@@ -711,8 +711,8 @@ class InToOutPath():
                 instance = self.graph.nodes[self.path[i]]['property']
                 self.delay += instance.delay
                 self.report += (
-                    f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
-                    f"{self.delay:> 10.1f}\n"
+                    f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                    f"{self.delay:> 10.3f}\n"
                 )
             # Add net delay
             if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
@@ -722,19 +722,19 @@ class InToOutPath():
                 if edge_delay:
                     self.delay += edge_delay
                     self.report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.1f}"
-                        f"{self.delay:> 10.1f}\n"
+                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
+                        f"{self.delay:> 10.3f}\n"
                     )
             elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
                 edge_delay = (
                     self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
                 self.delay += edge_delay
                 self.report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.1f}"
-                    f"{self.delay:> 10.1f}\n"
+                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
+                    f"{self.delay:> 10.3f}\n"
                 )
 
         self.report += (
-            f"{' ':4}{'Combinational Port Delay:':<29}{self.delay:> 10.1f}\n"
+            f"{' ':4}{'Combinational Port Delay:':<29}{self.delay:> 10.3f}\n"
             f"{'=':=<80}\n"
         )

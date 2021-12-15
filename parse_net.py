@@ -60,9 +60,9 @@ for path in comb_paths:
     total_combinational_delay += path.delay
 
 sta_rpt = (
-    f'Total setup slack {total_setup_slack:.1f} ns\n'
-    f'Total hold slack {total_hold_slack:.1f} ns\n'
-    f'Total combinal Port delay: {total_combinational_delay:.1f} ns\n'
+    f'Total setup slack {total_setup_slack:.3f} ns\n'
+    f'Total hold slack {total_hold_slack:.3f} ns\n'
+    f'Total combinal Port delay: {total_combinational_delay:.3f} ns\n'
     '\n\n'
 )
 setup_index = 0
