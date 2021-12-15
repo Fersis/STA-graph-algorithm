@@ -14,8 +14,12 @@ class NetGraph:
             lines = f.readlines()
 
         self.tdm = {}
+        # e.g. 325/(r+24)
         pattern1 = r'(?P<tdm>t\d+)  (?P<freq>[\d\.]+).+?(?P<bias>\d+)'
-        pattern2 = r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+).+?(?P<freq>[\d\.]+)'
+        # e.g. t0  (20+ r/4)/312.5
+        pattern2 = (r'(?P<tdm>t\d+)  \((?P<bias>\d+).+?(?P<base>\d+)'
+                    r'.+?(?P<freq>[\d\.]+)')
+        # e.g. t2  r/200
         pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
         for line in lines:
             match = re.search(pattern1, line)
@@ -353,7 +357,7 @@ class Path:
 
 class FFToFFPath(Path):
     """Path from DFF to DFF"""
-    
+
     def __init__(self, path: list, net_graph: NetGraph):
         super().__init__(path, net_graph)
 
@@ -433,7 +437,7 @@ class FFToFFPath(Path):
         )
         # Add clock source latency
         self.hold_expected_time += self.end.clock_source_latency
-        self.hold_report +=  self.end.clock_delay_report
+        self.hold_report += self.end.clock_delay_report
         # Add Thold
         self.hold_expected_time += self.net_graph.thold
         self.hold_report += (
@@ -655,7 +659,7 @@ class FFToOutPath(Path):
 
 class InToOutPath():
     """Path from in port to out port
-    
+
     This path is different from sequential path. It doesn't compute timing
     slack, it only computes delay. So this class doesn't inherit Path class.
     """
