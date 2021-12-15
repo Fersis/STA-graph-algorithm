@@ -87,6 +87,7 @@ class NetGraph:
                 end = nodes[j].group('name')
                 self.graph.add_edge(start, end)
                 self._add_direction(end, direction='l')
+                self._add_fpga_group(end)
                 # Add edge delay. Every edge should contain delay.
                 if nodes[j]['delay']:
                     self.graph.add_edge(start, end,
@@ -98,6 +99,7 @@ class NetGraph:
                 else:
                     self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
+            self._add_fpga_group(start)
 
         # Read design.are
         self.ff_nodes = []
@@ -140,6 +142,13 @@ class NetGraph:
             self.graph.add_node(name, direction=direction)
         elif (self.graph.nodes[name]['direction'] != direction):
             self.graph.add_node(name, direction='s/l')
+
+    def _add_fpga_group(self, name: str):
+        """Add node FPGA group"""
+        for i in range(len(self.fpga_groups)):
+            if name in self.fpga_groups[i]:
+                self.graph.add_node(name, group=(i + 1))
+                break
 
     def _add_property(self, match: re.Match):
         """Add a node class to node["property"]
