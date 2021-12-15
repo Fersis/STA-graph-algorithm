@@ -394,6 +394,7 @@ class FFToFFPath(Path):
             # Add instance delay
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
+            group = self.graph.nodes[self.path[i]]['group']
             data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
                 f"{self.data_arrival_time:> 10.1f}\n"
@@ -495,8 +496,10 @@ class InToFFPath(Path):
             # Because first instance is 'in port', use catch FF instead
             if i == 0:
                 instance = self.graph.nodes[self.path[-1]]['property']
+                group = self.graph.nodes[self.path[-1]]['group']
             else:
                 instance = self.graph.nodes[self.path[i]]['property']
+                group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time += instance.delay
             data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{'@FPGA':<10}{instance.delay:> 10.1f}"
@@ -594,6 +597,7 @@ class FFToOutPath(Path):
         # this instance
         for i in range(len(self.path) - 1):
             # Add instance delay
+            group = self.graph.nodes[self.path[i]]['group']
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
             data_arrival_time_report += (
@@ -702,6 +706,7 @@ class InToOutPath():
             # Add instance delay
             # For the first instance, it doesn't have any delay infomation,
             # just ignore it.
+            group = self.graph.nodes[self.path[i]]['group']
             if i != 0:
                 instance = self.graph.nodes[self.path[i]]['property']
                 self.delay += instance.delay
