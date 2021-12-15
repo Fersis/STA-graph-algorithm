@@ -8,6 +8,7 @@ class NetGraph:
         data_path = data_path
 
         # Read design.tdm
+        # tdm info should be read before design.net
         tdm_path = data_path + '/design.tdm'
         with open(tdm_path) as f:
             lines = f.readlines()
