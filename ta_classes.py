@@ -1,11 +1,21 @@
 import re
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 class NetGraph:
     def __init__(self, data_path) -> None:
         data_path = data_path
+
+        # Read design.node
+        node_path = data_path + '/design.node'
+        with open(node_path) as f:
+            contents = f.read()
+        self.fpga_groups = []
+        for fpga_group_str in re.split(r'FPGA', contents):
+            group = re.findall(r'g[p0-9]+', fpga_group_str)
+            if len(group) != 0:
+                self.fpga_groups.append(group)
 
         # Read design.tdm
         # tdm info should be read before design.net
