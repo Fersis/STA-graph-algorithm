@@ -13,7 +13,7 @@ graph2 = ta.NetGraph(data_path=data_path2)
 sequential_paths = []
 comb_paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
-    for path_nodes in taf.get_paths_no_loop(graph2.graph, start_ff, []):
+    for path_nodes in taf.get_paths(graph2.graph, start_ff, []):
         # print(path_nodes)
         # flip flop to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
@@ -25,7 +25,7 @@ for i, start_ff in enumerate(graph2.ff_nodes):
             sequential_paths.append(path)
 
 for in_port in graph2.in_ports:
-    for path_nodes in taf.get_paths_no_loop(graph2.graph, in_port, []):
+    for path_nodes in taf.get_paths(graph2.graph, in_port, []):
         # print(path_nodes)
         # in port to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
