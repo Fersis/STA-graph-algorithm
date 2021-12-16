@@ -32,29 +32,32 @@ class NetGraph:
         # e.g. t2  r/200
         pattern3 = r'(?P<tdm>t\d+)  r/(?P<base>\d+)'
         for line in lines:
-            match = re.search(pattern1, line)
-            if match:
-                tdm = {}
-                tdm['freq'] = match.group('freq')
-                tdm['bias'] = match.group('bias')
-                tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
-                continue
             match = re.search(pattern2, line)
             if match:
-                tdm = {}
-                tdm['bias'] = match.group('bias')
-                tdm['base'] = match.group('base')
-                tdm['freq'] = match.group('freq')
+                bias2 = float(match.group('bias'))
+                base2 = float(match.group('base'))
+                freq2 = float(match.group('freq'))
                 tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
+                def cal_tdm(ratio):
+                    return (bias2 + ratio/base2)/freq2
+                self.tdm[tdm_name] = cal_tdm
                 continue
             match = re.search(pattern3, line)
             if match:
-                tdm = {}
-                tdm['base'] = match.group('base')
+                base1 = float(match.group('base'))
                 tdm_name = match.group('tdm')
-                self.tdm[tdm_name] = tdm
+                def cal_tdm(ratio):
+                    return ratio/base1
+                self.tdm[tdm_name] = cal_tdm
+                continue
+            match = re.search(pattern1, line)
+            if match:
+                freq3 = float(match.group('freq'))
+                bias3 = float(match.group('bias'))
+                tdm_name = match.group('tdm')
+                def cal_tdm(ratio):
+                    return freq3/(ratio + bias3)
+                self.tdm[tdm_name] = cal_tdm
                 continue
 
         # Read design.net
@@ -94,8 +97,8 @@ class NetGraph:
                                         delay=float(nodes[j]['delay']))
                 elif nodes[j]['tdm']:
                     ratio = float(nodes[j]['ratio'])
-                    delay = self._cal_tdm_delay(nodes[j]['tdm'], ratio)
-                    self.graph.add_edge(start, end, tdm_delay=float(delay))
+                    delay = self.tdm[nodes[j]['tdm']](ratio)
+                    self.graph.add_edge(start, end, tdm_delay=delay)
                 else:
                     self.graph.add_edge(start, end, delay=0.)
             self._add_direction(start, direction='s')
@@ -201,21 +204,6 @@ class NetGraph:
                         self.graph.add_node(node_name, property=ClockCell())
             else:
                 self.graph.add_node(node_name, property=Cell(0.1))
-
-    def _cal_tdm_delay(self, tdm_name, ratio):
-        if tdm_name == 't0':
-            bias = float(self.tdm['t0']['bias'])
-            base = float(self.tdm['t0']['base'])
-            freq = float(self.tdm['t0']['freq'])
-            delay = (bias + ratio/base)/freq
-        elif tdm_name == 't1':
-            base = float(self.tdm['t1']['base'])
-            delay = ratio/base
-        elif tdm_name == 't2':
-            base = float(self.tdm['t2']['base'])
-            delay = ratio/base
-
-        return delay
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)
