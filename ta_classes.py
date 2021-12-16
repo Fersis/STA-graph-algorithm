@@ -373,6 +373,21 @@ class Path:
     def _parse_path(self):
         pass
 
+    def _add_net_delay(self, data_arrival_time_report, i):
+        edge = self.graph.edges[self.path[i], self.path[i + 1]]
+        delay = edge['delay']
+        self.data_arrival_time += delay
+        if edge['type'] == 'cable':
+            data_arrival_time_report += (
+                f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
+            )
+        elif edge['type'] == 'tdm':
+            data_arrival_time_report += (
+                f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
+            )
+
 
 class FFToFFPath(Path):
     """Path from DFF to DFF"""
@@ -400,24 +415,8 @@ class FFToFFPath(Path):
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-                # If no edge delay, skip it
-                if edge_delay:
-                    self.data_arrival_time += edge_delay
-                    data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
-                        f"{self.data_arrival_time:> 10.3f}\n"
-                    )
-            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
-                self.data_arrival_time += edge_delay
-                data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
-                    f"{self.data_arrival_time:> 10.3f}\n"
-                )
+            self._add_net_delay(data_arrival_time_report, i)
+
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
 
@@ -506,24 +505,7 @@ class InToFFPath(Path):
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-                # If no edge delay, skip it
-                if edge_delay:
-                    self.data_arrival_time += edge_delay
-                    data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
-                        f"{self.data_arrival_time:> 10.3f}\n"
-                    )
-            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
-                self.data_arrival_time += edge_delay
-                data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
-                    f"{self.data_arrival_time:> 10.3f}\n"
-                )
+            self._add_net_delay(data_arrival_time_report, i)
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
 
@@ -605,24 +587,7 @@ class FFToOutPath(Path):
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-                # If no edge delay, skip it
-                if edge_delay:
-                    self.data_arrival_time += edge_delay
-                    data_arrival_time_report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
-                        f"{self.data_arrival_time:> 10.3f}\n"
-                    )
-            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
-                self.data_arrival_time += edge_delay
-                data_arrival_time_report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
-                    f"{self.data_arrival_time:> 10.3f}\n"
-                )
+            self._add_net_delay(data_arrival_time_report, i)
         self.setup_report += data_arrival_time_report
         self.hold_report += data_arrival_time_report
 
@@ -715,26 +680,24 @@ class InToOutPath():
                     f"{self.delay:> 10.3f}\n"
                 )
             # Add net delay
-            if 'delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['delay'])
-                # If no edge delay, skip it
-                if edge_delay:
-                    self.delay += edge_delay
-                    self.report += (
-                        f"{' ':4}{' ':<9}{'@cable':<10}{edge_delay:> 10.3f}"
-                        f"{self.delay:> 10.3f}\n"
-                    )
-            elif 'tdm_delay' in self.graph.edges[self.path[i], self.path[i + 1]].keys():
-                edge_delay = (
-                    self.graph.edges[self.path[i], self.path[i + 1]]['tdm_delay'])
-                self.delay += edge_delay
-                self.report += (
-                    f"{' ':4}{' ':<9}{'@tdm':<10}{edge_delay:> 10.3f}"
-                    f"{self.delay:> 10.3f}\n"
-                )
+            self._add_net_delay(i)
 
         self.report += (
             f"{' ':4}{'Combinational Port Delay:':<29}{self.delay:> 10.3f}\n"
             f"{'=':=<80}\n"
         )
+
+    def _add_net_delay(self, i):
+        edge = self.graph.edges[self.path[i], self.path[i + 1]]
+        delay = edge['delay']
+        self.delay += delay
+        if edge['type'] == 'cable':
+            self.report += (
+                f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                f"{self.delay:> 10.3f}\n"
+            )
+        elif edge['type'] == 'tdm':
+            self.report += (
+                f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                f"{self.delay:> 10.3f}\n"
+            )
