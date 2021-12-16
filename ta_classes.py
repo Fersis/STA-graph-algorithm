@@ -355,6 +355,7 @@ class Path:
         self.setup_slack = 0
         self.hold_slack = 0
         # Path report string, including setup report and hold report
+        self.data_arrival_time_report = ''
         self.setup_report = ''
         self.hold_report = ''
         self._parse_path()
@@ -373,17 +374,17 @@ class Path:
     def _parse_path(self):
         pass
 
-    def _add_net_delay(self, data_arrival_time_report, i):
+    def _add_net_delay(self, i):
         edge = self.graph.edges[self.path[i], self.path[i + 1]]
         delay = edge['delay']
         self.data_arrival_time += delay
         if edge['type'] == 'cable':
-            data_arrival_time_report += (
+            self.data_arrival_time_report += (
                 f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
         elif edge['type'] == 'tdm':
-            data_arrival_time_report += (
+            self.data_arrival_time_report += (
                 f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
@@ -397,11 +398,11 @@ class FFToFFPath(Path):
 
     def _parse_path(self):
         ### Add data arrival time ###
-        data_arrival_time_report = f'path {self.path}:\n'
-        data_arrival_time_report += f"{' ':4}data arrival time:\n"
+        self.data_arrival_time_report = f'path {self.path}:\n'
+        self.data_arrival_time_report += f"{' ':4}data arrival time:\n"
         # Add clock source latency
         self.data_arrival_time += self.start.clock_source_latency
-        data_arrival_time_report += self.start.clock_delay_report
+        self.data_arrival_time_report += self.start.clock_delay_report
         # Iterate over path
         # Each iteration, add an instance delay and a net delay behind
         # this instance
@@ -410,15 +411,15 @@ class FFToFFPath(Path):
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
-            data_arrival_time_report += (
+            self.data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            self._add_net_delay(data_arrival_time_report, i)
+            self._add_net_delay(i)
 
-        self.setup_report += data_arrival_time_report
-        self.hold_report += data_arrival_time_report
+        self.setup_report += self.data_arrival_time_report
+        self.hold_report += self.data_arrival_time_report
 
         ### Add setup expected time ###
         self.setup_report += (
@@ -480,13 +481,13 @@ class InToFFPath(Path):
 
     def _parse_path(self):
         ### Add data arrival time ###
-        data_arrival_time_report = f'path {self.path}:\n'
-        data_arrival_time_report += f"{' ':4}data arrival time:\n"
+        self.data_arrival_time_report = f'path {self.path}:\n'
+        self.data_arrival_time_report += f"{' ':4}data arrival time:\n"
         # Add clock source latency
         # Note! On 'in port' to DFF path, we replace 'in port' as a
         # virtual DFF which is the same as catch DFF
         self.data_arrival_time += self.end.clock_source_latency
-        data_arrival_time_report += self.end.clock_delay_report
+        self.data_arrival_time_report += self.end.clock_delay_report
         # Iterate over path
         # Each iteration, add an instance delay and a net delay behind
         # this instance
@@ -500,14 +501,14 @@ class InToFFPath(Path):
                 instance = self.graph.nodes[self.path[i]]['property']
                 group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time += instance.delay
-            data_arrival_time_report += (
+            self.data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            self._add_net_delay(data_arrival_time_report, i)
-        self.setup_report += data_arrival_time_report
-        self.hold_report += data_arrival_time_report
+            self._add_net_delay(i)
+        self.setup_report += self.data_arrival_time_report
+        self.hold_report += self.data_arrival_time_report
 
         ### Add setup expected time ###
         self.setup_report += (
@@ -569,11 +570,11 @@ class FFToOutPath(Path):
 
     def _parse_path(self):
         ### Add data arrival time ###
-        data_arrival_time_report = f'path {self.path}:\n'
-        data_arrival_time_report += f"{' ':4}data arrival time:\n"
+        self.data_arrival_time_report = f'path {self.path}:\n'
+        self.data_arrival_time_report += f"{' ':4}data arrival time:\n"
         # Add clock source latency
         self.data_arrival_time += self.start.clock_source_latency
-        data_arrival_time_report += self.start.clock_delay_report
+        self.data_arrival_time_report += self.start.clock_delay_report
         # Iterate over path
         # Each iteration, add an instance delay and a net delay behind
         # this instance
@@ -582,14 +583,14 @@ class FFToOutPath(Path):
             group = self.graph.nodes[self.path[i]]['group']
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
-            data_arrival_time_report += (
+            self.data_arrival_time_report += (
                 f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
-            self._add_net_delay(data_arrival_time_report, i)
-        self.setup_report += data_arrival_time_report
-        self.hold_report += data_arrival_time_report
+            self._add_net_delay(i)
+        self.setup_report += self.data_arrival_time_report
+        self.hold_report += self.data_arrival_time_report
 
         ### Add setup expected time ###
         self.setup_report += (
