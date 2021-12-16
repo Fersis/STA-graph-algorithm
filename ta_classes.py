@@ -68,8 +68,10 @@ class NetGraph:
         nodes = []
         for line in lines:
             nodes.append(re.search(
-                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?(?:(?P<delay>\d+)|(?P<tdm>t\d+)r(?P<ratio>\d+))?',
-                line))
+                r'(?P<name>g[p0-9]+) (?P<direction>[ls])\s?'
+                r'(?:(?P<cable_delay>\d+)|(?P<tdm>t\d+)r(?P<ratio>\d+))?',
+                line)
+            )
 
         # Get all indexes of split points
         split_indexes = []
@@ -92,15 +94,25 @@ class NetGraph:
                 self._add_direction(end, direction='l')
                 self._add_fpga_group(end)
                 # Add edge delay. Every edge should contain delay.
-                if nodes[j]['delay']:
+                # We have a edge property 'delay' which contains the delay
+                # value. There are three types of delay: cabel delay,
+                # tdm delay and no delay. So we also have a edge property 
+                # 'type' to denote delay type.
+                # Cable delay exits, indicating that delay type is 'cable'
+                if nodes[j]['cable_delay']:
                     self.graph.add_edge(start, end,
-                                        delay=float(nodes[j]['delay']))
+                                        delay=float(nodes[j]['cable_delay']),
+                                        type='cable')
+                # tdm delay exits, indicating that delay type is 'tdm'
                 elif nodes[j]['tdm']:
                     ratio = float(nodes[j]['ratio'])
-                    delay = self.tdm[nodes[j]['tdm']](ratio)
-                    self.graph.add_edge(start, end, tdm_delay=delay)
+                    tdm_delay = self.tdm[nodes[j]['tdm']](ratio)
+                    self.graph.add_edge(start, end, delay=tdm_delay,
+                                        type='tdm')
+                # Neither cable or tdm delay exits, indicating that there
+                # are no delay
                 else:
-                    self.graph.add_edge(start, end, delay=0.)
+                    self.graph.add_edge(start, end, delay=0., type='none')
             self._add_direction(start, direction='s')
             self._add_fpga_group(start)
 
