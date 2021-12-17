@@ -2,10 +2,10 @@ import re
 import ta_classes as ta
 import ta_functions as taf
 from pathlib import Path
-import networkx as nx
+import sys
 
 
-data_path2 = 'data/testcase_10_29/testdata_3'
+data_path2 = 'data/testcase_10_29/testdata_4'
 case_name = re.search(r'.*/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
 # graph2.draw()
@@ -13,7 +13,7 @@ graph2 = ta.NetGraph(data_path=data_path2)
 sequential_paths = []
 comb_paths = []
 for i, start_ff in enumerate(graph2.ff_nodes):
-    for path_nodes in taf.get_paths(graph2.graph, start_ff, []):
+    for path_nodes in taf.get_paths(graph2.graph, start_ff):
         # print(path_nodes)
         # flip flop to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
@@ -25,7 +25,7 @@ for i, start_ff in enumerate(graph2.ff_nodes):
             sequential_paths.append(path)
 
 for in_port in graph2.in_ports:
-    for path_nodes in taf.get_paths(graph2.graph, in_port, []):
+    for path_nodes in taf.get_paths(graph2.graph, in_port):
         # print(path_nodes)
         # in port to flip flop
         if isinstance(graph2.graph.nodes[path_nodes[-1]]['property'], ta.DFF):
@@ -45,10 +45,10 @@ hold_violated_paths = sequential_paths.copy()
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
 # Get top 20 paths
-if len(setup_violated_paths) > 100:
-    setup_violated_paths = setup_violated_paths[:100]
-if len(hold_violated_paths) > 100:
-    hold_violated_paths = hold_violated_paths[:100]
+if len(setup_violated_paths) > 20:
+    setup_violated_paths = setup_violated_paths[:20]
+if len(hold_violated_paths) > 20:
+    hold_violated_paths = hold_violated_paths[:20]
 total_setup_slack = 0
 total_hold_slack = 0
 total_combinational_delay = 0
