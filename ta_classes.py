@@ -113,10 +113,11 @@ class NetGraph:
         for group_str in re.split(r'FPGA', contents):
             match = re.search(r'\d', group_str)
             if match:
-                group_num = match[0]
+                group_num = '@FPGA' + match[0]
             nodes = re.findall(r'g[p0-9]+', group_str)
             for node in nodes:
-                self.graph.add_node(node, group=group_num)
+                if node in self.graph:
+                    self.graph.add_node(node, group=group_num)
 
 
         ### Read design.are ###
@@ -398,7 +399,7 @@ class FFToFFPath(Path):
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -482,13 +483,12 @@ class InToFFPath(Path):
             # Because first instance is 'in port', use catch FF instead
             if i == 0:
                 instance = self.graph.nodes[self.path[-1]]['property']
-                group = self.graph.nodes[self.path[-1]]['group']
             else:
                 instance = self.graph.nodes[self.path[i]]['property']
-                group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time += instance.delay
+            group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -566,11 +566,11 @@ class FFToOutPath(Path):
         # this instance
         for i in range(len(self.path) - 1):
             # Add instance delay
-            group = self.graph.nodes[self.path[i]]['group']
             instance = self.graph.nodes[self.path[i]]['property']
             self.data_arrival_time += instance.delay
+            group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -663,7 +663,7 @@ class InToOutPath():
                 instance = self.graph.nodes[self.path[i]]['property']
                 self.delay += instance.delay
                 self.report += (
-                    f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                    f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                     f"{self.delay:> 10.3f}\n"
                 )
             # Add net delay
