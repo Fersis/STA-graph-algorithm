@@ -261,39 +261,26 @@ class DFF:
 
         for predecessor in self.graph.predecessors(node):
             if type(self.graph.nodes[predecessor]['property']) == ClockSource:
-                if 'delay' in self.graph.edges[predecessor, node].keys():
-                    delay = self.graph.edges[predecessor, node]['delay']
-                    if delay:
-                        self.clock_source_latency += delay
-                        self.clock_delay_report += (
-                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
-                            f"{self.clock_source_latency:> 10.3f}\n"
-                        )
-                elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
-                    delay = self.graph.edges[predecessor, node]['tdm_delay']
-                    self.clock_source_latency += delay
-                    self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
-                        f"{self.clock_source_latency:> 10.3f}\n"
-                    )
+                self._add_net_delay(predecessor, node)
                 return
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
-                if 'delay' in self.graph.edges[predecessor, node].keys():
-                    delay = self.graph.edges[predecessor, node]['delay']
-                    if delay:
-                        self.clock_source_latency += delay
-                        self.clock_delay_report += (
-                            f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
-                            f"{self.clock_source_latency:> 10.3f}\n"
-                        )
-                elif 'tdm_delay' in self.graph.edges[predecessor, node].keys():
-                    delay = self.graph.edges[predecessor, node]['tdm_delay']
-                    self.clock_source_latency += delay
-                    self.clock_delay_report += (
-                        f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
-                        f"{self.clock_source_latency:> 10.3f}\n"
-                    )
+                self._add_net_delay(predecessor, node)
                 return self.get_clock_path_delay(predecessor)
+
+    def _add_net_delay(self, node1, node2):
+        edge = self.graph.edges[node1, node2]
+        delay = edge['delay']
+        self.clock_source_latency += delay
+        if edge['type'] == 'cable':
+            self.clock_delay_report += (
+                f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
+            )
+        elif edge['type'] == 'tdm':
+            self.clock_delay_report += (
+                f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                f"{self.data_arrival_time:> 10.3f}\n"
+            )
 
 
 class Port:
