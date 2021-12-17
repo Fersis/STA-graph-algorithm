@@ -116,7 +116,8 @@ class NetGraph:
                 group_num = match[0]
             nodes = re.findall(r'g[p0-9]+', group_str)
             for node in nodes:
-                self.graph.add_node(node, group=group_num)
+                if node in self.graph:
+                    self.graph.add_node(node, group=group_num)
 
 
         ### Read design.are ###
