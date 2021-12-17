@@ -7,17 +7,6 @@ class NetGraph:
     def __init__(self, data_path) -> None:
         data_path = data_path
 
-        ### Read design.node ###
-        node_path = data_path + '/design.node'
-        with open(node_path) as f:
-            contents = f.read()
-        self.fpga_groups = []
-        for fpga_group_str in re.split(r'FPGA', contents):
-            group = re.findall(r'g[p0-9]+', fpga_group_str)
-            if len(group) != 0:
-                self.fpga_groups.append(group)
-
-
         ### Read design.tdm ###
         # tdm info should be read before design.net
         tdm_path = data_path + '/design.tdm'
@@ -94,7 +83,6 @@ class NetGraph:
                 end = nodes[j].group('name')
                 self.graph.add_edge(start, end)
                 self._add_direction(end, direction='l')
-                self._add_fpga_group(end)
                 # Add edge delay. Every edge should contain delay.
                 # We have a edge property 'delay' which contains the delay
                 # value. There are three types of delay: cabel delay,
@@ -116,7 +104,19 @@ class NetGraph:
                 else:
                     self.graph.add_edge(start, end, delay=0., type='none')
             self._add_direction(start, direction='s')
-            self._add_fpga_group(start)
+
+
+        ### Read design.node ###
+        node_path = data_path + '/design.node'
+        with open(node_path) as f:
+            contents = f.read()
+        for group_str in re.split(r'FPGA', contents):
+            match = re.search(r'\d', group_str)
+            if match:
+                group_num = match[0]
+            nodes = re.findall(r'g[p0-9]+', group_str)
+            for node in nodes:
+                self.graph.add_node(node, group=group_num)
 
 
         ### Read design.are ###
@@ -162,13 +162,6 @@ class NetGraph:
             self.graph.add_node(name, direction=direction)
         elif (self.graph.nodes[name]['direction'] != direction):
             self.graph.add_node(name, direction='s/l')
-
-    def _add_fpga_group(self, name: str):
-        """Add node FPGA group"""
-        for i in range(len(self.fpga_groups)):
-            if name in self.fpga_groups[i]:
-                self.graph.add_node(name, group=(i + 1))
-                break
 
     def _add_property(self, match: re.Match):
         """Add a node class to node["property"]
