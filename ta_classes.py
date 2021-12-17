@@ -7,7 +7,7 @@ class NetGraph:
     def __init__(self, data_path) -> None:
         data_path = data_path
 
-        # Read design.node
+        ### Read design.node ###
         node_path = data_path + '/design.node'
         with open(node_path) as f:
             contents = f.read()
@@ -17,7 +17,8 @@ class NetGraph:
             if len(group) != 0:
                 self.fpga_groups.append(group)
 
-        # Read design.tdm
+
+        ### Read design.tdm ###
         # tdm info should be read before design.net
         tdm_path = data_path + '/design.tdm'
         with open(tdm_path) as f:
@@ -60,7 +61,8 @@ class NetGraph:
                 self.tdm[tdm_name] = cal_tdm
                 continue
 
-        # Read design.net
+
+        ### Read design.net ###
         net_path = data_path + '/design.net'
         with open(net_path) as f:
             lines = f.readlines()
@@ -116,7 +118,8 @@ class NetGraph:
             self._add_direction(start, direction='s')
             self._add_fpga_group(start)
 
-        # Read design.are
+
+        ### Read design.are ###
         self.ff_nodes = []
         self.in_ports = []
         self.out_ports = []
@@ -134,7 +137,8 @@ class NetGraph:
         for ff_node in self.ff_nodes:
             self.graph.nodes[ff_node]['property'].get_clock_path_delay(ff_node)
 
-        # Read design.clk
+
+        ### Read design.clk ###
         clk_path = data_path + '/design.clk'
         with open(clk_path) as f:
             lines = f.readlines()
@@ -145,6 +149,7 @@ class NetGraph:
             # Check whether match or not
             if match:
                 self.clk[match.group('clk')] = 1000 / int(match.group('freq'))
+
 
         # Fixed parameters
         self.tsu = 1.
