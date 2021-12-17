@@ -375,6 +375,7 @@ class Path:
         pass
 
     def _add_net_delay(self, i):
+        """Add net delay from path[i] to path[i + 1]"""
         edge = self.graph.edges[self.path[i], self.path[i + 1]]
         delay = edge['delay']
         self.data_arrival_time += delay
