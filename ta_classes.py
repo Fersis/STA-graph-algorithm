@@ -113,7 +113,7 @@ class NetGraph:
         for group_str in re.split(r'FPGA', contents):
             match = re.search(r'\d', group_str)
             if match:
-                group_num = match[0]
+                group_num = '@FPGA' + match[0]
             nodes = re.findall(r'g[p0-9]+', group_str)
             for node in nodes:
                 if node in self.graph:
@@ -399,7 +399,7 @@ class FFToFFPath(Path):
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -488,7 +488,7 @@ class InToFFPath(Path):
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -570,7 +570,7 @@ class FFToOutPath(Path):
             self.data_arrival_time += instance.delay
             group = self.graph.nodes[self.path[i]]['group']
             self.data_arrival_time_report += (
-                f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                 f"{self.data_arrival_time:> 10.3f}\n"
             )
             # Add net delay
@@ -663,7 +663,7 @@ class InToOutPath():
                 instance = self.graph.nodes[self.path[i]]['property']
                 self.delay += instance.delay
                 self.report += (
-                    f"{' ':4}{self.path[i]:<9}{f'@FPGA{group}':<10}{instance.delay:> 10.3f}"
+                    f"{' ':4}{self.path[i]:<9}{group:<10}{instance.delay:> 10.3f}"
                     f"{self.delay:> 10.3f}\n"
                 )
             # Add net delay
