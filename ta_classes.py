@@ -276,12 +276,12 @@ class DFF:
         if edge['type'] == 'cable':
             self.clock_delay_report += (
                 f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
-                f"{self.data_arrival_time:> 10.3f}\n"
+                f"{self.clock_source_latency:> 10.3f}\n"
             )
         elif edge['type'] == 'tdm':
             self.clock_delay_report += (
                 f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
-                f"{self.data_arrival_time:> 10.3f}\n"
+                f"{self.clock_source_latency:> 10.3f}\n"
             )
 
 
