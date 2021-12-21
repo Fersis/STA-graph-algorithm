@@ -264,7 +264,7 @@ class DFF:
             if type(self.graph.nodes[predecessor]['property']) == ClockSource:
                 self._add_net_delay(predecessor, node)
                 return
-            elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
+            elif type(self.graph.nodes[predecessor]['property']) == ClockCell or Cell:
                 self._add_net_delay(predecessor, node)
                 return self.get_clock_path_delay(predecessor)
         return None
