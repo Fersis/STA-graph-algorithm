@@ -136,7 +136,9 @@ class NetGraph:
 
         # Get clock source latency
         for ff_node in self.ff_nodes:
-            self.graph.nodes[ff_node]['property'].get_clock_path_delay(ff_node)
+            if (self.graph.nodes[ff_node]['property']
+                    .get_clock_path_delay(ff_node) == None):
+                raise Exception(f'cannot find clock path of DFF {ff_node}')
 
 
         ### Read design.clk ###
@@ -265,6 +267,7 @@ class DFF:
             elif type(self.graph.nodes[predecessor]['property']) == ClockCell:
                 self._add_net_delay(predecessor, node)
                 return self.get_clock_path_delay(predecessor)
+        return None
 
     def _add_net_delay(self, node1, node2):
         edge = self.graph.edges[node1, node2]
