@@ -134,6 +134,7 @@ class NetGraph:
                 line)
             self._add_property(match)
 
+        raise Exception
         # Get clock source latency
         for ff_node in self.ff_nodes:
             if (self.graph.nodes[ff_node]['property']
@@ -214,6 +215,7 @@ class NetGraph:
                         # self.graph.add_node(node_name, property=Power())
                         self.graph.remove_node(node_name)
                     elif self.graph.nodes[node_name]['direction'] == 's/l':
+                        print(node_name)
                         self.graph.add_node(node_name, property=ClockCell())
             else:
                 self.graph.add_node(node_name, property=Cell(0.1))
