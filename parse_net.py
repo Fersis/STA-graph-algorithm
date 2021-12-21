@@ -37,18 +37,14 @@ for in_port in graph2.in_ports:
             comb_paths.append(path)
 
 
-# setup_violated_paths = [path for path in sequential_paths if path.is_setup_violated]
-# hold_violated_paths = [path for path in sequential_paths if path.is_hold_violated]
-setup_violated_paths = sequential_paths.copy()
-hold_violated_paths = sequential_paths.copy()
+setup_violated_paths = [path for path in sequential_paths if path.is_setup_violated]
+hold_violated_paths = [path for path in sequential_paths if path.is_hold_violated]
+# setup_violated_paths = sequential_paths.copy()
+# hold_violated_paths = sequential_paths.copy()
 # Sort
 setup_violated_paths.sort(key=lambda path: path.setup_slack)
 hold_violated_paths.sort(key=lambda path: path.hold_slack)
-# Get top 20 paths
-if len(setup_violated_paths) > 20:
-    setup_violated_paths = setup_violated_paths[:20]
-if len(hold_violated_paths) > 20:
-    hold_violated_paths = hold_violated_paths[:20]
+# Cal total slack
 total_setup_slack = 0
 total_hold_slack = 0
 total_combinational_delay = 0
@@ -65,6 +61,13 @@ sta_rpt = (
     f'Total combinal Port delay: {total_combinational_delay:.3f} ns\n'
     '\n\n'
 )
+
+# Get top 20 paths
+if len(setup_violated_paths) > 20:
+    setup_violated_paths = setup_violated_paths[:20]
+if len(hold_violated_paths) > 20:
+    hold_violated_paths = hold_violated_paths[:20]
+
 setup_index = 0
 setup_report = f'Top {len(setup_violated_paths)} setup violated paths:\n'
 for path in setup_violated_paths:
