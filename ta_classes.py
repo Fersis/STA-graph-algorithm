@@ -1,7 +1,9 @@
-from os import name
+from os import name, path
 import re
+from typing import Tuple
 import networkx as nx
 import matplotlib.pyplot as plt
+from networkx.classes import graph
 
 
 class Power:
@@ -231,6 +233,7 @@ class NetGraph:
         self.ff_nodes = []
         self.in_ports = []
         self.out_ports = []
+        self.clk_srcs = []
         are_path = data_path + '/design.are'
         with open(are_path) as f:
             lines = f.readlines()
@@ -242,10 +245,13 @@ class NetGraph:
             self._add_property(match)
 
         # Get clock source latency
-        for ff_node in self.ff_nodes:
-            if (self.graph.nodes[ff_node]['property']
-                    .get_clock_path_delay(ff_node) == None):
-                raise Exception(f'cannot find clock path of DFF {ff_node}')
+        # for ff_node in self.ff_nodes:
+        #     if (self.graph.nodes[ff_node]['property']
+        #             .get_clock_path_delay(ff_node) == None):
+        #         raise Exception(f'cannot find clock path of DFF {ff_node}')
+
+        for clk_src in self.clk_srcs:
+            self._add_clk_path_delay(clk_src, 0., '')
 
 
         ### Read design.clk ###
@@ -291,6 +297,7 @@ class NetGraph:
             if match.group('clk'):
                 self.graph.add_node(
                     node_name, property=ClockSource(match.group('clk')))
+                self.clk_srcs.append(node_name)
             else:
                 # Classify in port and out port
                 if self.graph.nodes[node_name]['direction'] == 's':
@@ -324,6 +331,57 @@ class NetGraph:
                         self.graph.add_node(node_name, property=ClockCell())
             else:
                 self.graph.add_node(node_name, property=Cell(0.1))
+
+    def _add_clk_path_delay(self, parent, path_delay, path_delay_report):
+        """Add clock path delay to DFFs which belong to the clock source
+        
+        This is a forward searching method which starting from a clock
+        source and end in a DFF, then pass the clock path delay and report
+        to this DFF. This method should walk around all DFFs belong to
+        clock source."""
+
+        for child in self.graph[parent]:
+            instance = self.graph.nodes[child]['property']
+            if isinstance(instance, DFF):
+                delay, delay_report = self._get_net_delay(
+                    parent, child, path_delay)
+                path_delay += delay
+                path_delay_report += delay_report
+                instance.clock_source_latency = path_delay
+                instance.clock_delay_report = path_delay_report
+            elif isinstance(instance, ClockCell | Cell):
+                delay, delay_report = self._get_net_delay(
+                    parent, child, path_delay)
+                path_delay += delay
+                path_delay_report += delay_report
+                self._add_clk_path_delay(child, path_delay, path_delay_report)
+            else:
+                raise Exception(f'Unexpected type {type(instance)}')
+
+    def _get_net_delay(self, node1, node2, path_delay) -> Tuple[float, str]:
+        """Return delay between node1 and node2 and corresponding report"""
+        
+        edge = self.graph.edges[node1, node2]
+        delay = edge['delay']
+        path_delay += delay
+        if edge['type'] == 'cable':
+            delay_report = (
+                f"{' ':4}{' ':<9}{'@cable':<10}{delay:> 10.3f}"
+                f"{path_delay:> 10.3f}\n"
+            )
+        elif edge['type'] == 'tdm':
+            delay_report = (
+                f"{' ':4}{' ':<9}{'@tdm':<10}{delay:> 10.3f}"
+                f"{path_delay:> 10.3f}\n"
+            )
+        elif edge['type'] == 'none':
+            delay_report = ''
+            pass
+        else:
+            delay_report = ''
+            raise Exception(f"Unexpected edge type {edge['type']}")
+
+        return delay, delay_report
 
     def draw(self):
         nx.draw_kamada_kawai(self.graph, with_labels=True, node_size=1000)

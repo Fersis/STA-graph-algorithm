@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 
-data_path2 = 'data/testcase_10_29/testdata_1'
+data_path2 = 'data/testcase_10_29/testdata_4'
 print(data_path2)
 case_name = re.search(r'.*/(.+)', data_path2)[1]
 graph2 = ta.NetGraph(data_path=data_path2)
