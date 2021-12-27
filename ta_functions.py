@@ -23,3 +23,11 @@ def get_paths(G: nx.DiGraph, start) -> list:
 
     for path_nodes in get_paths_recursive(G, start, [start]):
         yield path_nodes
+
+
+def intersection_of_sets(sets: list[set]):
+    """Return an intersection set of sets"""
+    s = sets[0] & sets[1]
+    for seti in sets[1:]:
+        s &= seti
+    return s
