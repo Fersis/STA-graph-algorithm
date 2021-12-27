@@ -1,3 +1,4 @@
+from typing import Iterable
 import networkx as nx
 import ta_classes as ta
 
@@ -31,3 +32,20 @@ def intersection_of_sets(sets: list[set]):
     for seti in sets[1:]:
         s &= seti
     return s
+
+
+def lowest_common_ancestor_of_nodes(G: nx.DiGraph, nodes: Iterable[str]):
+    """Find all LCA of given nodes
+    
+    Parameters
+    ----------
+    G : NetworkX directed graph
+
+    nodes : iterable of nodes
+    """
+
+    ancestors_of_nodes = [nx.ancestors(G, node) for node in nodes]
+    common_ancestors_of_nodes = intersection_of_sets(ancestors_of_nodes)
+    LCA = [node for node in common_ancestors_of_nodes
+           if G.out_degree[node] == 0]
+    return LCA

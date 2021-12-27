@@ -2,6 +2,7 @@ from os import name
 import re
 import networkx as nx
 import matplotlib.pyplot as plt
+import ta_functions as taf
 
 
 class Power:
@@ -240,6 +241,8 @@ class NetGraph:
                 r'(?P<name>g[p0-9]+)\s?(?:{(?P<is_ff>ff)?\s?(?P<clk>c\d+)?})?',
                 line)
             self._add_property(match)
+
+        LCA = taf.lowest_common_ancestor_of_nodes(self.graph, self.ff_nodes)
 
         # Get clock source latency
         for ff_node in self.ff_nodes:
